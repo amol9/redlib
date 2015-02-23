@@ -1,3 +1,5 @@
+#author: Amol Umrale
+
 import re
 
 from .tlds import tlds
