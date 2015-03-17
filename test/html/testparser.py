@@ -1,6 +1,6 @@
 import sys
 
-from wallp.htmlparser import HtmlParser, DebugDump
+from mangoutils.html.parser import HtmlParser, DebugDump
 
 
 if __name__ == '__main__':
@@ -9,9 +9,10 @@ if __name__ == '__main__':
 
 	arg = sys.argv[1]
 	if arg.startswith('http'):
-		import wallp.web as web
-		data = web.download(arg)
-		parser.feed(data)
+		#import wallp.web as web
+		#data = web.download(arg)
+		#parser.feed(data)
+		pass
 	else:
 		with open(sys.argv[1], 'r') as f:
 			parser.feed(f.read())

@@ -1,6 +1,6 @@
 from unittest import TestCase, main as ut_main
 
-from ..urls import AbsUrl, RelUrl, UrlException, UrlParseException
+from mangoutils.web.urls import AbsUrl, RelUrl, UrlException, UrlParseException
 
 
 class TestUrls(TestCase):
