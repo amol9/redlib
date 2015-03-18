@@ -13,7 +13,7 @@ setup(	name='mangoutils',
 	author='Amol Umrale',
 	author_email='babaiscool@gmail.com',
 	url='http://pypi.python.org/pypi/mangoutils/',
-	packages=['mangoutils', 'mangoutils.web', 'mangoutils.html'],
+	packages=['mangoutils', 'mangoutils.web', 'mangoutils.html', 'mangoutils.system'],
 	scripts=['ez_setup.py'],
 	classifiers=[
 		'Development Status :: 4 - Beta',
