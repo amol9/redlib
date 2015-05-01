@@ -1,6 +1,6 @@
-==========
-mangoutils
-==========
+======
+mutils
+======
 
 
 Submodules
@@ -9,9 +9,10 @@ Submodules
 * html: utility class for parsing html and accessing elements via xpath
 * system: platform related functions
 
+
 Download
 ========
 
-* PyPI: http://pypi.python.org/pypi/mangoutils
-* Source: https://github.com/amol9/mangoutils
+* PyPI: http://pypi.python.org/pypi/mutils
+* Source: https://github.com/amol9/mutils
 
