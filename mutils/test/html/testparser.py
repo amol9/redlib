@@ -1,6 +1,6 @@
 import sys
 
-from mangoutils.html.parser import HtmlParser, DebugDump
+from mutils.html.parser import HtmlParser, DebugDump
 
 
 if __name__ == '__main__':

@@ -4,16 +4,16 @@ ez_setup.use_setuptools()
 from setuptools import setup, find_packages
 import platform
 import imp
-from mangoutils.version import __version__
+from mutils.version import __version__
 
 
-setup(	name='mangoutils',
+setup(	name='mutils',
 	description='A collection of commonly useful utilities.',
 	version=__version__,
 	author='Amol Umrale',
 	author_email='babaiscool@gmail.com',
-	url='http://pypi.python.org/pypi/mangoutils/',
-	packages=['mangoutils', 'mangoutils.web', 'mangoutils.html', 'mangoutils.system'],
+	url='http://pypi.python.org/pypi/mutils/',
+	packages=find_packages(),
 	scripts=['ez_setup.py'],
 	classifiers=[
 		'Development Status :: 4 - Beta',
