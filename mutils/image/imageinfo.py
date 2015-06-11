@@ -3,6 +3,7 @@
 from io import BytesIO
 import struct
 import re
+import string
 
 
 def get_image_info(data, filepath=None):
@@ -17,7 +18,7 @@ def get_image_info(data, filepath=None):
 	# handle GIFs
 	if (size >= 10) and data[:6] in (b'GIF87a', b'GIF89a'):
 		# Check to see if content_type is correct
-		content_type = 'image/gif'
+		content_type = 'gif'
 		w, h = struct.unpack("<HH", data[6:10])
 		width = int(w)
 		height = int(h)
@@ -26,7 +27,7 @@ def get_image_info(data, filepath=None):
 	# Bytes 0-7 are below, 4-byte chunk length, then 'IHDR'
 	# and finally the 4-byte width, height
 	elif ((size >= 24) and data.startswith(b'\211PNG\r\n\032\n') and (data[12:16] == b'IHDR')):
-		content_type = 'image/png'
+		content_type = 'png'
 		w, h = struct.unpack(">LL", data[16:24])
 		width = int(w)
 		height = int(h)
@@ -34,14 +35,14 @@ def get_image_info(data, filepath=None):
 	# Maybe this is for an older PNG version.
 	elif (size >= 16) and data.startswith(b'\211PNG\r\n\032\n'):
 		# Check to see if we have the right content type
-		content_type = 'image/png'
+		content_type = 'png'
 		w, h = struct.unpack(">LL", data[8:16])
 		width = int(w)
 		height = int(h)
 
 	# handle JPEGs
 	elif (size >= 2) and data.startswith(b'\377\330'):
-		content_type = 'image/jpeg'
+		content_type = 'jpeg'
 		jpeg = BytesIO(data)
 		jpeg.read(2)
 		b = jpeg.read(1)
@@ -79,7 +80,7 @@ def get_image_info(data, filepath=None):
 
 	# handle bmps
 	elif (size >= 54) and data.startswith(b'BM'):
-		content_type = 'image/bmp'
+		content_type = 'bmp'
 		w, h = struct.unpack('ii', data[18:26])
 		width = int(w)
 		height = int(h)
