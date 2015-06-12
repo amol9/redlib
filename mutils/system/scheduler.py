@@ -4,7 +4,7 @@ import re
 import os
 
 from .common import is_linux, is_windows
-from . import sys_command
+from .sys_command import sys_command
 
 
 help = 	'm: minute, h: hour, d: day, w: week, M: month' + os.linesep +\
