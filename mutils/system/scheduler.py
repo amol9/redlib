@@ -34,17 +34,32 @@ class Scheduler():
 	def exists(self, taskname):
 		pass
 
+
 	def parse(self, freq):
+		'''Time frequency must be of the form: {num}{period}
+		num: 	a number between 1 and 999
+		period:	m: minutes
+			h: hours
+			d: days
+			w: weeks
+			M: months
+
+		e.g.	1m - 1 minute
+			1h - 1 hour
+			2w - 2 weeks'''
+
 		freq_regex = re.compile("(\d{1,3})((m|h|d|w|M))")
 		match = freq_regex.match(freq)
 
 		if match is None:
 			raise FrequencyError('time frequency not supported')
 
-		num = match.group(1)
+		num = int(match.group(1))
+		if num <= 0:
+			raise FrequencyError('bad value: %d'%num)
 		period = match.group(2)
 
-		return int(num), period
+		return num, period
 
 
 class LinuxScheduler(Scheduler):
@@ -55,7 +70,6 @@ class LinuxScheduler(Scheduler):
 		'w': '0 0 * * */%d',
 		'M': '0 0 1 */%d *'
 	}
-
 
 	def schedule(self, freq, cmd, taskname):
 		num, period = self.parse(freq)
