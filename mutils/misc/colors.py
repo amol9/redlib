@@ -155,8 +155,8 @@ def print_names():
 	for name, value in colors.items():
 		short, _ = rgb2short(value[2 : ])
 
-		print('\x1b[38;5;%sm'%short,)
-		print('{0:22}'.format(name),)
+		print('\x1b[38;5;%sm'%short),
+		print('{0:22}'.format(name)),
 
 		if count % colors_per_line == 0 :
 			print('')

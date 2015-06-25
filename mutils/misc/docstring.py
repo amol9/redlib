@@ -1,4 +1,6 @@
 import sys
+import inspect
+import re
 
 
 def trim(docstring):
@@ -27,3 +29,30 @@ def trim(docstring):
 		trimmed.pop(0)
 	# Return a single string:
 	return '\n'.join(trimmed)
+
+
+def extract_help(func):
+	assert func.__doc__ is not None
+
+	argspec = inspect.getargspec(func)
+	if argspec.args[0] == 'self':
+		del argspec.args[0]
+
+	regex_args_help = ""
+	for arg in argspec.args:
+		regex_args_help += "((%s):(.*))"%arg
+
+	regex = re.compile("(.*)" + regex_args_help, re.M | re.S)
+
+	match = regex.match(func.__doc__)
+
+	help = {}
+	if match:
+		help['help'] = match.group(1).strip()			#extract main help string
+
+		i = 3
+		for _ in range(len(argspec.args)):
+			help[match.group(i)] = match.group(i+1).strip()
+			i += 3
+
+	return help

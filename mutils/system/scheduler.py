@@ -7,8 +7,6 @@ from .common import is_linux, is_windows
 from .sys_command import sys_command
 
 
-help = 	'm: minute, h: hour, d: day, w: week, M: month' + os.linesep +\
-	'e.g. 1h: every 1 hour, 10m: every 10 minutes, etc.'
 
 
 class FrequencyError(Exception):
@@ -60,6 +58,9 @@ class Scheduler():
 		period = match.group(2)
 
 		return num, period
+
+
+frequency_help = Scheduler.parse.__doc__
 
 
 class LinuxScheduler(Scheduler):
