@@ -147,20 +147,24 @@ for line in colors_text.splitlines():
 
 
 from .colortrans import rgb2short
+from ..system import terminalsize
 
 
 def print_names():
-	count = 1
-	colors_per_line = 5
+	count = 0
+	color_name_col_width = 22
+	terminal_width, _ = terminalsize.get_terminal_size()
+	colors_per_line = int(terminal_width / (color_name_col_width + 3))
+	
 	for name, value in colors.items():
 		short, _ = rgb2short(value[2 : ])
 
 		print('\x1b[38;5;%sm'%short),
-		print('{0:22}'.format(name)),
+		print(('{0:%d}'%color_name_col_width).format(name)),
 
+		count += 1
 		if count % colors_per_line == 0 :
 			print('')
-		count += 1
 
 	print('\x1b[0m')
 
