@@ -105,3 +105,21 @@ class HtmlParser(HTMLParser):
 
 	etree = property(get_element_tree)
 
+
+class HtmlStripper(HTMLParser):
+	def __init__(self):
+		if is_py3():
+			HTMLParser.__init__(self, convert_charrefs=True)
+		else:
+			HTMLParser.__init__(self)
+
+		self._output = ''
+
+
+	def handle_data(self, data):
+		self._output += data + ' '
+
+
+	def get_output(self):
+		return self._output
+	
