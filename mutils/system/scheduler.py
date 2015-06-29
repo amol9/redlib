@@ -126,7 +126,6 @@ class WindowsScheduler(Scheduler):
 		num, period = self.parse(freq)
 		schtasks_cmd = 'schtasks /create /tn %s /tr \"%s\" /sc %s /mo %d'%\
 				(taskname, cmd, self.period_map[period], num)
-		log.debug('schedule command: %s'%schtasks_cmd)
 		rc, _ = sys_command(schtasks_cmd, supress_output=True)
 		if rc == 0:
 			return True
