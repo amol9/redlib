@@ -8,7 +8,7 @@ from mutils.version import __version__
 
 
 setup(	name			= 'mutils',
-	description		= 'A collection of commonly useful utilities.',
+	description		= 'A collection of classes and functions for general utility.',
 	version			= __version__,
 	author			= 'Amol Umrale',
 	author_email		= 'babaiscool@gmail.com',
