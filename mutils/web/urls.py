@@ -18,7 +18,7 @@ class AbsUrl():
 				"(?:(?:" +
 					"(?:(" +
 						"(?:[a-zA-Z0-9]{1,64}\.)*" +			#subdomain
-						"(?:[a-zA-Z][a-zA-Z0-9-]{0,63})" +		#hostname
+						"(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,63})" +		#hostname
 						"(?:\.[a-zA-Z]{2,3}(?:\.[a-zA-Z]{2,3})?)" +	#tld
 					")|(" +
 						"(?:[a-zA-Z][a-zA-Z0-9-]{0,63})" +		#local hostname
@@ -47,6 +47,8 @@ class AbsUrl():
 
 		self._valid = True
 		self._scheme = match.group(1)
+
+		#import pdb; pdb.set_trace()
 
 		if match.group(2) is not None:
 			parts = match.group(2).split('.')

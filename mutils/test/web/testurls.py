@@ -51,7 +51,7 @@ class TestUrls(TestCase):
 			('http://a', 			True, 'http', None, 'a', None, 'a'),
 			('http://a.com', 		True, 'http', None, 'a', 'com', 'a.com'),
 			('http://11', 			False),
-			('http://11.com', 		False),
+			('http://11.com', 		True, 'http', None, '11', 'com', '11.com'),
 			('http://192.168.0.100', 	True, 'http', None, '192.168.0.100', None, '192.168.0.100'),
 			('http://192.168.0.', 		False),
 			('http://192.168.0', 		False)
@@ -60,7 +60,7 @@ class TestUrls(TestCase):
 
 		for item in test_urls:
 			abs_url = AbsUrl(item[0])
-			abs_url.parse()
+			#abs_url.parse()
 
 			self.assertEquals(abs_url.valid, item[1])
 			if item[1]:
@@ -84,8 +84,8 @@ class TestUrls(TestCase):
 			('http://', False),
 			('http://a', True, 'http', None, 'a', None),
 			('http://a.com', True, 'http', 'a.com', None, None),
+			('http://11.com', True, 'http', '11.com', None, None),
 			('http://11', False),
-			('http://11.com', False),
 			('http://192.168.0.100', True, 'http', None, None, '192.168.0.100'),
 			('http://192.168.0.', False),
 			('http://192.168.0', False)
