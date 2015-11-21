@@ -1,5 +1,5 @@
 ======
-mutils
+redlib
 ======
 
 
@@ -14,6 +14,6 @@ Submodules
 Download
 ========
 
-* PyPI: http://pypi.python.org/pypi/mutils
-* Source: https://github.com/amol9/mutils
+* PyPI: http://pypi.python.org/pypi/redlib
+* Source: https://github.com/amol9/redlib
 

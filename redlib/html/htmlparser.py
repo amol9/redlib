@@ -1,51 +1,23 @@
-from mutils.system import *
+from redlib.system import *
 if is_py3():
 	from html.parser import HTMLParser
 else:	
 	from HTMLParser import HTMLParser
+
 from xml.etree.ElementTree import XMLParser, Element, SubElement, ElementTree
 import re
 import sys
 
+from . import HtmlParserDebugger
 
-class DebugDump():
-	def __init__(self, debug=False, filter=None, children=True):
-		self._debug = debug
-		self._filter = filter
-		self._start_level = None
-
-	
-	def dump_tag(self, tag, attrs=None, end=False, level=0, msg=None):
-		if self._debug:
-			if self._filter and self._start_level is None:
-				matches = [(k, v) for (k, v) in self._filter if (k, v) in attrs] if attrs else []
-				#print matches
-				if len(matches) == 0:
-					return
-				self._start_level = level
-
-			if self._start_level is not None:
-				if end:
-					if level == self._start_level:
-						self._start_level = None
-			
-			spaces = ''.join([' ' for i in range(level)])
-			attr_string = None
-			if attrs:
-				attr_string = ''
-				for (k, v) in attrs:
-					attr_string += ' ' + str(k) + '=\"' + str(v) + '\"'
-			print(('%s<%s%s%s>%s'%(spaces, ('/' if end else ''), tag, (attr_string if attr_string else ''),
-						(' ' + msg if msg else ''))))
-		
 
 class HtmlParser(HTMLParser):
-	def __init__(self, skip_tags=[], ddump=None):
+	def __init__(self, skip_tags=[], debugger=None):
 		self._root = None
 		self._stack = []
 		self._skip_tags = skip_tags
 		self._skip = False, None
-		self._ddump = ddump
+		self._hpd = debugger if debugger is not None else HtmlParserDebugger(debug=False)
 
 		if is_py3():
 			HTMLParser.__init__(self, convert_charrefs=True)
@@ -60,7 +32,7 @@ class HtmlParser(HTMLParser):
 			self._skip = True, tag
 			return
 
-		if self._ddump: self._ddump.dump_tag(tag, attrs, level=len(self._stack))
+		self._hpd.dump_tag(tag, attrs, level=len(self._stack))
 
 		attr_dict = dict((k, v) for (k, v) in attrs)
 		if self._root == None:
@@ -80,12 +52,12 @@ class HtmlParser(HTMLParser):
 		if tag == self._stack[-1].tag or True:
 			self._stack.pop()
 		else:
-			if self._ddump:
+			if self._hpd.debugging:
 				m = self._stack[-1]
 				attrs = [(k, v) for (k, v) in list(m.attrib.items())]
-				self._ddump.dump_tag(m.tag, attrs=attrs, level=len(self._stack), msg='mismatch')
+				self._hpd.dump_tag(m.tag, attrs=attrs, level=len(self._stack), msg='mismatch')
 
-		if self._ddump: self._ddump.dump_tag(tag, end=True, level=len(self._stack))
+		self._hpd.dump_tag(tag, end=True, level=len(self._stack))
 
 
 	def handle_data(self, data):

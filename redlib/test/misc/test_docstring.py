@@ -1,6 +1,6 @@
 from unittest import TestCase, main as ut_main
 
-from mutils.misc import docstring
+from redlib.misc import docstring
 
 
 class TestClass:

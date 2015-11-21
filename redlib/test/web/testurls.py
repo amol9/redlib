@@ -1,6 +1,6 @@
 from unittest import TestCase, main as ut_main
 
-from mutils.web.urls import AbsUrl, RelUrl, UrlException, UrlParseException
+from redlib.web.urls import AbsUrl, RelUrl, UrlException, UrlParseException
 
 
 class TestUrls(TestCase):
