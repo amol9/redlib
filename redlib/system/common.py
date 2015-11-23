@@ -23,13 +23,4 @@ def get_pictures_dir():
 	return path
 
 
-def prints(msg):
-	if is_py3():
-		if sys.stdout is not None:
-			sys.stdout.write(msg + ' ')
-			sys.stdout.flush()
-	else:
-		if sys.stdout is not None:
-			print(msg),
-			sys.stdout.flush()
-	
+
