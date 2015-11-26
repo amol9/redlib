@@ -140,4 +140,5 @@ colorlist = {
 	"whitesmoke":           '0xf5f5f5',
 	"yellow":               '0xffff00',
 	"yellowgreen":          '0x9acd32' }
+"""A dictionary containing name-value pairs for colors."""
 

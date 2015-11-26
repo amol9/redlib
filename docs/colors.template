@@ -1,0 +1,11 @@
+colors
+======
+
+.. autodata:: redlib.colors.clist.colorlist
+    :annotation:
+
+    
+Color List
+----------
+
+<colorlist>

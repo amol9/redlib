@@ -1,3 +1,5 @@
+'This module contains miscellaneous printing functions.'
+
 import sys
 
 from ..colors.colortrans import rgb2short
@@ -50,4 +52,43 @@ def print_colorlist():
 			print('')
 	if is_linux():
 		print('\x1b[0m')
+
+
+# docs:
+
+printc.__doc__ = \
+	"""Print the given message in specified color.
+
+	Args:
+		msg (str): The message to be printed.
+		color (str): Color name. (e.g. red, blue, etc.) Or, color hex value (e.g. 0xaaaaaa).
+
+	Notes:
+		If no color is specified, the message will be printed in the default color.
+
+		Use function `print_colorlist()` to print a list of all available color names.
+
+		Supported Platform: Linux only.
+
+	"""
+
+prints.__doc__ = \
+	"""Python version independent (2.7/3.x) way to print without newline.
+
+	Args:
+		msg (str): The message to be printed.
+	  
+	"""
+
+print_colorlist.__doc__ = \
+	"""Print a list of all available color names.
+
+	Example:
+
+	.. testcode::
+
+		from redlib.prnt import *
+		print_colorlist()
+
+	"""
 
