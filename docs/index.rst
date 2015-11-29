@@ -13,6 +13,7 @@ Contents:
 
    modules/prnt
    modules/colors
+   modules/misc
 
 
 Indices and tables

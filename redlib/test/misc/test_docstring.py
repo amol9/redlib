@@ -11,56 +11,103 @@ class TestClass:
 		pass
 
 	def div(self, a, b):
-		'''Divide  first number by 2.
+		'''Divide  first number by second number.
 		Note: result will be float.
-		a: first number
-		b: second number\n may not be zero'''
+
+		a: 	first number
+		b: 	second number
+			may not be zero
+
+		This is extra help text (long).'''
 		pass
 
 	def sub(self, a, b):
 		'''a: first number
+		some more help on a
 		b: second number'''
 		pass
 
 	def mul(self, a, b):
 		'''Multiply two numbers.
-		a: first number'''
+		a: first number'''		
+		pass
+
+	def mod(self, a, b):
+		pass
+
+	def ceil(self, a):
+		'Return nearest greater integer.'
+		pass
+
+	def floor(self, a):
+		'''Return nearest smaller integer.
+		a: input number, number type: int / float'''
 		pass
 
 
-class TestDocstring(TestCase):
+class TestExtractHelp(TestCase):
 
-	def test_extract_help(self):
+	def test_no_long(self):
 		help = docstring.extract_help(TestClass.add)
 
-		self.assertEqual(len(help), 3)
-		self.assertDictEqual(help, {'help'	: 'Add two numbers.',
+		self.assertEqual(len(help), 4)
+		self.assertDictEqual(help, {'short'	: 'Add two numbers.',
 					    'a'		: 'first number',
-					    'b'		: 'second number'})
+					    'b'		: 'second number',
+					    'long'	: None})
 
 
-	def test_extract_help_multiline(self):
+	def test_multiline_short_and_long(self):
 		help = docstring.extract_help(TestClass.div)
 
-		self.assertEqual(len(help), 3)
-		self.assertDictEqual(help, {'help'	: 'Divide  first number by 2.\n\t\tNote: result will be float.',
+		self.assertEqual(len(help), 4)
+		self.assertDictEqual(help, {'short'	: 'Divide  first number by second number.\nNote: result will be float.',
 					    'a'		: 'first number',
-					    'b'		: 'second number\n may not be zero'})
+					    'b'		: 'second number\nmay not be zero',
+					    'long'	: 'This is extra help text (long).'})
 
 
-	def test_extract_help_no_main_help(self):
+	def test_no_short_multiline_arg_help(self):
 		help = docstring.extract_help(TestClass.sub)
 
-		self.assertEqual(len(help), 3)
-		self.assertDictEqual(help, {'help'	: '',
-					    'a'		: 'first number',
-					    'b'		: 'second number'})
+		self.assertEqual(len(help), 4)
+		self.assertDictEqual(help, {'short'	: None,
+					    'a'		: 'first number\nsome more help on a',
+					    'b'		: 'second number',
+					    'long'	: None})
 
 
-	def test_extract_help_one_arg_missing(self):
+	def test_one_arg_missing(self):
 		help = docstring.extract_help(TestClass.mul)
 
-		self.assertEqual(len(help), 0)
+		self.assertEqual(len(help), 3)
+		self.assertDictEqual(help, {'short'	: 'Multiply two numbers.',
+					    'a'		: 'first number',
+					    'long'	: None})
+
+
+	def test_no_docstring(self):
+		help = docstring.extract_help(TestClass.mod)
+
+		self.assertEqual(len(help), 2)
+
+
+	def test_only_short(self):
+		help = docstring.extract_help(TestClass.ceil)
+
+		self.assertEqual(len(help), 2)
+		self.assertDictEqual(help, {'short'	: 'Return nearest greater integer.',
+					    'long'	: None})
+
+
+	def test_colon_in_arg_help(self):
+		help = docstring.extract_help(TestClass.floor)
+
+		self.assertEqual(len(help), 3)
+		self.assertDictEqual(help, {'short'	: 'Return nearest smaller integer.',
+					    'a'		: 'input number, number type: int / float',	
+					    'long'	: None})
+
 
 
 if __name__ == '__main__':

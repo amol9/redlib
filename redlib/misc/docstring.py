@@ -4,14 +4,12 @@ import re
 import os
 
 
-def trim(docstring):
-	'source: https://www.python.org/dev/peps/pep-0257/'
-
-	if not docstring:
+def trim(doc_string):
+	if not doc_string:
 		return ''
 	# Convert tabs to spaces (following the normal Python rules)
 	# and split into a list of lines:
-	lines = docstring.expandtabs().splitlines()
+	lines = doc_string.expandtabs().splitlines()
 	# Determine minimum indentation (first line doesn't count):
 	indent = sys.maxsize
 	for line in lines[1:]:
@@ -66,7 +64,11 @@ def extract_help_w_regex(func):
 
 
 def extract_help(func):
-	help = {}
+	help = {
+		'short'	: None,
+		'long' 	: None
+	}
+	args = inspect.getargspec(func).args
 
 	if func.__doc__ is not None:
 		argspec = inspect.getargspec(func)
@@ -78,14 +80,72 @@ def extract_help(func):
 				continue
 
 			if line.find(':') > 0:
-				parts = line.split(':')
-				item = parts[0].strip()
-				help[item] = parts[1].strip()
+				parts = line.split(':', 1)
+				if parts[0].strip() in args:
+					item = parts[0].strip()
+					line = parts[1].strip()
+
+			if item in help.keys() and help[item] is not None:
+				help[item] += os.linesep + line.strip()
 			else:
-				if item in help.keys():
-					help[item] += os.linesep + line.strip()
-				else:
-					help[item] = line.strip()
+				help[item] = line.strip()
 
 	return help
 
+
+extract_help.__doc__ = \
+	"""Extract help text from doc string of a function.
+
+	Args:
+		func: Function for which help is to be extracted.
+
+	Returns:
+		(dict): With the following elements.
+
+		short: short help text, appearing at the beginning of the doc string\n
+		long: long help text, appearing after the argument help\n
+		an element for each of the argument for which help is present
+
+	.. testcode::
+		
+		from redlib.misc.docstring import extract_help
+		from pprint import pprint
+
+		def div(a, b):
+			'''Divide  first number by second number.
+			Note: result will be float.
+			
+			a: 	first number
+			b: 	second number
+			may not be zero
+			
+			This is extra help text (long).'''
+			pass
+
+		help = extract_help(div)
+		pprint(help)
+
+	.. testoutput::
+	
+		{'a': 'first number',
+		 'b': 'second number\\nmay not be zero',
+		 'long': 'This is extra help text (long).',
+		 'short': 'Divide  first number by second number.\\nNote: result will be float.'}
+	
+	**Extraction Logic**
+
+	1. Look for docstring in function. If no docstring found, return empty help dictionary ({'short': None, 'long': None}).
+	2. Extract line(s) and assign them to help['short'] until help for an argument or a blank line or end of docstring is encountered.
+	3. For any line with a colon(:) in it, split it on colon and check if first part is an argument name. If yes, then, add the text following the colon to help[argument_name]. If no, then, just add the line as continuation for last help item found.
+	4. If a blank line is found, the text following it is added to help['long'], unless, it is argument help.
+
+	"""
+
+extract_help_w_regex.__doc__ = \
+	"""Extract help text from doc string of a function using regex. (Deprecated)"""
+
+trim.__doc__ = \
+	"""Trim leading and trailing blank lines as well as tabs from docstring.
+
+	Source: https://www.python.org/dev/peps/pep-0257/"""
+	

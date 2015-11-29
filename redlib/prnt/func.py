@@ -90,5 +90,10 @@ print_colorlist.__doc__ = \
 		from redlib.prnt import *
 		print_colorlist()
 
+	.. testoutput::
+	    :options: +ELLIPSIS
+
+	    indigo, 
+
 	"""
 

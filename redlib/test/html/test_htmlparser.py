@@ -5,7 +5,7 @@ from glob import glob
 import os
 
 from redlib.html import HtmlParser, HtmlParserDebugger
-from ..common import get_test_data_dir
+from redlib.test.common import get_test_data_dir
 
 
 class TestHtmlParser(TestCase):
