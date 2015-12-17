@@ -10,7 +10,7 @@ class CronDBusError(Exception):
 
 
 class CronDBus:
-	dbus_session_var = 'DBUS_SESSION_BUS_ADDRESS'
+	dbus_sba_var = 'DBUS_SESSION_BUS_ADDRESS'
 
 	def __init__(self):
 		if not is_linux():
@@ -24,39 +24,38 @@ class CronDBus:
 		if not self.cron_session():
 			raise CronDBusError('not a cron session')
 
-		if self.environ_var_set(self.dbus_session_var):
+		if self.environ_var_set(self.dbus_sba_var):
 			return
 
 		uid = os.getuid()
-		if uid == None: 
-			log.error('could not get user id')
-			return False
+		if uid is None:
+			raise CronDBusError('could not get uid')
 
 		dbusd_pids = []
 		rc, pids = sys_command('pgrep dbus-daemon -u %s'%uid)
+
 		if rc != 0:
-			log.error('could not get pid of dbus-daemon')
-			return False
+			raise CronDBusError('could not get pid of dbus-daemon')
+
 		dbusd_pids = pids.split()
-		log.debug('dbus-daemon pids: %s'%' '.join(dbusd_pids))
 
 		dbus_session_bus_addr = None
-		dbus_session_bus_addr_re = re.compile(b'DBUS_SESSION_BUS_ADDRESS.*?\x00')
+		dbus_session_bus_addr_re = re.compile(b'%s.*?\x00'%self.dbus_sba_var)
 
 		for pid in dbusd_pids:
-			dbusd_environ = None
+			self._dbusd_env = None
 			with open('/proc/%s/environ'%pid, 'rb') as f:
-				dbusd_environ = f.read()
+				self._dbusd_env = f.read()
 
-			matches = dbus_session_bus_addr_re.findall(dbusd_environ)
+			matches = dbus_session_bus_addr_re.findall(self._dbusd_env)
 			if len(matches) == 0:
 				continue
 
 			dbus_session_bus_addr = matches[0][matches[0].index('=') + 1:-1]
 
-			log.debug('DBUS_SESSION_BUS_ADDRESS = %s'%dbus_session_bus_addr)
-			os.environ['DBUS_SESSION_BUS_ADDRESS'] = dbus_session_bus_addr
-			self._remove_list.append(self.dbus_session_var)
+			os.environ[self.dbus_sba_var] = dbus_session_bus_addr
+			self._remove_list.append(self.dbus_sba_var)
+			break
 	
 
 	def remove(self):
@@ -65,6 +64,8 @@ class CronDBus:
 
 		for var in self._remove_list:
 			os.environ.pop(var)
+
+		self._remove_list = []
 
 
 	def add_var(self, var, overwrite=False):
@@ -82,7 +83,7 @@ class CronDBus:
 
 
 	def cron_session(self):
-		return not os.isatty(sys.stdin.fileno())
+		return not os.isatty(sys.stdin.fileno()) or os.environ.get('TERM', None) is None
 
 
 	def environ_var_set(self, var):

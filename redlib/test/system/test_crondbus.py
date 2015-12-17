@@ -1,6 +1,8 @@
-fron unittest import TestCase, main as ut_main
+from unittest import TestCase, main as ut_main
+import os
+import subprocess
 
-from redlib.system import CronDBus, CronDBusError
+from redlib.system import CronDBus, CronDBusError, sys_command
 
 
 cronenv = {
@@ -19,22 +21,24 @@ class TestCronDBus(TestCase):
 	@classmethod
 	def setUpClass(cls):
 		cls._orig_env = os.environ
-		os.environ = cronenv
 
 
 	@classmethod
 	def tearDownClass(cls):
 		os.environ = cls._orig_env
 
+	
+	def setUp(self):
+		os.environ = cronenv.copy()
+
 
 	def test_dbus_sesssion_bus_address(self):
 		cd = CronDBus()
 		cd.setup()
 
-		#check for proper session bus address
-
-		dsba = os.environ.get(cd.dbus_session_var, None)
+		dsba = os.environ.get(cd.dbus_sba_var, None)
 		self.assertIsNotNone(dsba)
+		self.assertTrue(dsba.startswith('unix:abstract=/tmp/dbus-'))
 
 
 	def test_add_var(self):
@@ -45,11 +49,11 @@ class TestCronDBus(TestCase):
 
 		gdmsession = os.environ.get('GDMSESSION', None)
 		self.assertIsNotNone(gdmsession)
-		#
+		self.assertGreater(len(gdmsession), 1)
 
 		display = os.environ.get('DISPLAY', None)
 		self.assertIsNotNone(display)
-		#
+		self.assertGreater(len(display), 1)
 
 
 	def test_remove(self):
@@ -59,18 +63,26 @@ class TestCronDBus(TestCase):
 
 		cd.remove()
 
-		self.assertIsNone(os.environ.get(cd.dbus_session_var, None))
+		self.assertIsNone(os.environ.get(cd.dbus_sba_var, None))
 		self.assertIsNone(os.environ.get('GDMSESSION', None))
-		self.assertNotIn(cd.dbus_session_var, os.environ.keys())
+		self.assertNotIn(cd.dbus_sba_var, os.environ.keys())
 		self.assertNotIn('GDMSESSION', os.environ.keys())
 
 
 	def test_dbus_use(self):
 		cd = CronDBus()
-		cd.setup()
 
-		rc, _ = sys_command('xdpyinfo')
-		self.assertEquals(rc, 0)
+		def use_dbus():
+			devnull = open(os.devnull, 'w')
+			p = subprocess.Popen('xdpyinfo', env=os.environ, stdout=devnull, stderr=devnull)
+			p.wait()
+			return p.returncode
+
+		self.assertNotEquals(use_dbus(), 0)
+
+		cd.setup()
+		cd.add_var('DISPLAY')
+		self.assertEquals(use_dbus(), 0)
 
 
 #for test cases where we are not in a cron environment
