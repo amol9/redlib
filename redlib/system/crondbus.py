@@ -5,6 +5,11 @@ import sys
 from . import sys_command, is_linux
 
 
+def in_cron():
+	return not os.isatty(sys.stdin.fileno()) or os.environ.get('TERM', None) is None
+
+
+
 class CronDBusError(Exception):
 	pass
 
@@ -83,7 +88,7 @@ class CronDBus:
 
 
 	def cron_session(self):
-		return not os.isatty(sys.stdin.fileno()) or os.environ.get('TERM', None) is None
+		return in_cron()
 
 
 	def environ_var_set(self, var):
