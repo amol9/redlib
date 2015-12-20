@@ -10,7 +10,7 @@ def update():
 		text = response.read()
 		response.close()
 	except HTTPError as e:
-		print e.message
+		print(e.message)
 		return
 
 	tlds = []

@@ -9,16 +9,16 @@ else:
 	DEVNULL = open(os.devnull, 'wb')
 
 
-def sys_command(cmd, supress_output=False):
+def sys_command(cmd, suppress_output=False):
 	try:
 		output = None
 
-		if supress_output:
+		if suppress_output:
 			check_output(cmd, shell=True, stderr=DEVNULL)
 		else:
 			output = check_output(cmd, shell=True)
 
-		if is_py3() and not supress_output:
+		if is_py3() and not suppress_output:
 			output = output.decode(encoding='utf-8')
 
 		return 0, output
