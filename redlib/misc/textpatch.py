@@ -39,7 +39,8 @@ class TextPatch:
 					continue
 				lines.append(line + linesep)
 
-		lines[-1] = lines[-1][:-1]
+		if len(lines) > 0:
+			lines[-1] = lines[-1][:-1]
 
 		with open(self._filepath, 'w') as f:
 			f.writelines(lines)
@@ -81,7 +82,11 @@ class TextPatch:
 				if not rm:
 					lines.append(line + linesep)
 
-		lines[-1] = lines[-1][:-1]
+		if rm:
+			raise TextPatchError('cannot remove section, end not found')
+
+		if len(lines) > 0:
+			lines[-1] = lines[-1][:-1]
 
 		with open(self._filepath, 'w') as f:
 			f.writelines(lines)
