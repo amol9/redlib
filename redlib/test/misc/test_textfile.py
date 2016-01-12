@@ -1,11 +1,13 @@
 from unittest import TestCase, main as ut_main
 import os
+from glob import glob
+from os.path import exists
 
-from redlib.misc.textpatch import TextPatch, TextPatchError
+from redlib.misc.textfile import TextFile, TextFileError
 from redlib.misc.docstring import trim
 
 
-class TestTextPatch(TestCase):
+class TestTextFile(TestCase):
 	dbg_print_file = False 
 
 	test_file = trim(
@@ -65,10 +67,10 @@ class TestTextPatch(TestCase):
 
 	def append_remove_line(self, filename, mod_after_append=False):
 		self.print_file(filename, "original file")
-		tp = TextPatch(filename)
+		tf = TextFile(filename)
 
 		orig_text = open(filename, 'r').read()
-		tp.append_line(self.line, id=self.id)
+		tf.append_line(self.line, id=self.id)
 		self.print_file(filename, "file after appending self.line")
 
 		if mod_after_append:
@@ -77,7 +79,7 @@ class TestTextPatch(TestCase):
 		with open(filename, 'r') as f:
 			self.assertNotEquals(f.read().find(self.line), -1)
 
-		tp.remove_line(self.id)
+		tf.remove_line(self.id)
 		self.print_file(filename, "file after removing appended self.line")
 
 		with open(filename, 'r') as f:
@@ -112,12 +114,12 @@ class TestTextPatch(TestCase):
 
 
 	def append_remove_section(self, filename, section, mod_after_append=False):
-		tp = TextPatch(filename)
+		tf = TextFile(filename)
 		self.print_file(filename, "original file")
 
 		orig_text = open(filename, 'r').read()
 		
-		tp.append_section(section, id=self.id)
+		tf.append_section(section, id=self.id)
 		self.print_file(filename, "file after appending section")
 
 		if mod_after_append:
@@ -126,7 +128,7 @@ class TestTextPatch(TestCase):
 		with open(filename, 'r') as f:
 			self.assertNotEquals(f.read().find(section), -1)
 
-		tp.remove_section(self.id)
+		tf.remove_section(self.id)
 		self.print_file(filename, "file after removing appended section")
 
 		with open(filename, 'r') as f:
@@ -161,20 +163,20 @@ class TestTextPatch(TestCase):
 
 
 	def test_file_not_found(self):
-		with self.assertRaises(TextPatchError) as a:
-			tp = TextPatch(self.noexist_filename)
+		with self.assertRaises(TextFileError) as a:
+			tf = TextFile(self.noexist_filename)
 
 
 	def test_remove_nested_section(self):
-		tp = TextPatch(self.test_filename)
+		tf = TextFile(self.test_filename)
 
 		with open(self.test_filename, 'a+') as f:
-			f.write(tp._comment_prefix + tp.section_start_prefix + self.id + os.linesep)
+			f.write(tf._comment_prefix + tf.section_start_prefix + self.id + os.linesep)
 
-		tp.append_section(self.section, id=self.id)
+		tf.append_section(self.section, id=self.id)
 
-		with self.assertRaises(TextPatchError) as a:
-			tp.remove_section(self.id)
+		with self.assertRaises(TextFileError) as a:
+			tf.remove_section(self.id)
 
 
 	def remove_last_line_from_file(self, filename):
@@ -191,29 +193,58 @@ class TestTextPatch(TestCase):
 	def test_remove_section_with_no_end_marker(self):
 		filename = self.test_filename
 
-		tp = TextPatch(filename)
+		tf = TextFile(filename)
 		self.print_file(filename, "original file")
 
-		tp.append_section(self.section, id=self.id)
+		tf.append_section(self.section, id=self.id)
 		self.print_file(filename, "file after appending section")
 
 		self.remove_last_line_from_file(self.test_filename)
 		self.print_file(filename, "file after removing end marker of section")
 
-		with self.assertRaises(TextPatchError) as a:
-			tp.remove_section(self.id)
+		with self.assertRaises(TextFileError) as a:
+			tf.remove_section(self.id)
 
 
 	def test_remove_from_empty_file(self):
 		filename = self.empty_filename
 
-		tp = TextPatch(filename)
+		tf = TextFile(filename)
 
-		tp.remove_line(self.id)
+		tf.remove_line(self.id)
 		self.assertEquals(open(filename, 'r').read(), '')
 
-		tp.remove_section(self.id)
+		tf.remove_section(self.id)
 		self.assertEquals(open(filename, 'r').read(), '')
+
+
+	def test_backup(self):
+		[os.remove(f) for f in glob('*.' + TextFile.default_backup_ext + '*')]
+
+		filename = self.test_filename
+
+		def create_files(suffixes):
+			for s in suffixes:
+				open(self.test_filename + '.' + TextFile.default_backup_ext + s, 'a').close()
+
+		def remove_files(suffixes):
+			for s in suffixes:
+				os.remove(self.test_filename + '.' + TextFile.default_backup_ext + s)
+
+		def test(suffixes, next_suffix):
+			textfile = TextFile(self.test_filename, backup=True)
+			create_files(suffixes)
+			backup_filename = textfile.backup()
+			self.assertEqual(backup_filename,  self.test_filename + '.' + TextFile.default_backup_ext + next_suffix)
+			self.assertTrue(exists(backup_filename))
+			remove_files(suffixes + [next_suffix])
+
+		test(['', '1', '2', '3', 'a'], '4')
+		test(['', '1', '2', '3', '10', 'a'], '11')
+		test(['1', '2', '3', 'a'], '4')
+		test([], '')
+		test(['w'], '')
+		test(['22'], '23')
 
 
 if __name__ == '__main__':
