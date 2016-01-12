@@ -71,7 +71,7 @@ class TestTextFile(TestCase):
 
 		orig_text = open(filename, 'r').read()
 		tf.append_line(self.line, id=self.id)
-		self.print_file(filename, "file after appending self.line")
+		self.print_file(filename, "file after appending line")
 
 		if mod_after_append:
 			self.append_to_file(filename, self.more1)
@@ -80,7 +80,7 @@ class TestTextFile(TestCase):
 			self.assertNotEquals(f.read().find(self.line), -1)
 
 		tf.remove_line(self.id)
-		self.print_file(filename, "file after removing appended self.line")
+		self.print_file(filename, "file after removing appended line")
 
 		with open(filename, 'r') as f:
 			text = f.read()
@@ -245,6 +245,38 @@ class TestTextFile(TestCase):
 		test([], '')
 		test(['w'], '')
 		test(['22'], '23')
+
+	
+	def append_line_multiple_times(self, textfile, n):
+		for _ in range (0, n):
+			textfile.append_line(self.line, id=self.id)
+
+
+	def test_find_line(self):
+		textfile = TextFile(self.test_filename)
+
+		self.assertEqual(0, textfile.find_line(self.id))
+
+		textfile.append_line(self.line, id=self.id)
+		self.assertEqual(1, textfile.find_line(self.id))
+
+		self.append_line_multiple_times(textfile, 4)
+		self.assertEqual(5, textfile.find_line(self.id))
+
+		textfile.remove_line(self.id)
+		self.assertEqual(0, textfile.find_line(self.id))
+
+
+	def test_remove_dups(self):
+		textfile = TextFile(self.test_filename)
+
+		self.append_line_multiple_times(textfile, 4)
+		textfile.append_line(self.line, id=self.id, remove_dups=True)
+
+		self.assertEqual(1, textfile.find_line(self.id))
+
+		textfile.append_line(self.line, id=self.id, remove_dups=True)
+		self.assertEqual(1, textfile.find_line(self.id))
 
 
 if __name__ == '__main__':

@@ -62,6 +62,13 @@ class TextFile:
 
 
 	def append_line(self, line, id=None, remove_dups=False):
+		if remove_dups:
+			count = self.find_line(id)
+			if count > 0:
+				if count > 1:
+					self.remove_line(id, count=count-1)
+				return
+
 		with open(self._filepath, 'a+') as f:
 			f.write(linesep)
 			f.write(line + ('\t' + self._comment_prefix + id if id is not None else ''))
