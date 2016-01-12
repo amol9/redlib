@@ -3,7 +3,7 @@ import os
 from glob import glob
 from os.path import exists
 
-from redlib.misc.textfile import TextFile, TextFileError
+from redlib.misc.textfile import TextFile, TextFileError, LineFilter
 from redlib.misc.docstring import trim
 
 
@@ -65,7 +65,7 @@ class TestTextFile(TestCase):
 			print('-')
 
 
-	def append_remove_line(self, filename, mod_after_append=False):
+	def append_remove_lines(self, filename, mod_after_append=False):
 		self.print_file(filename, "original file")
 		tf = TextFile(filename)
 
@@ -79,7 +79,7 @@ class TestTextFile(TestCase):
 		with open(filename, 'r') as f:
 			self.assertNotEquals(f.read().find(self.line), -1)
 
-		tf.remove_line(self.id)
+		tf.remove_lines(self.id)
 		self.print_file(filename, "file after removing appended line")
 
 		with open(filename, 'r') as f:
@@ -97,20 +97,20 @@ class TestTextFile(TestCase):
 		self.print_file(filename, "file after addind more content")
 
 
-	def test_append_remove_line(self):
-		self.append_remove_line(self.test_filename)
+	def test_append_remove_lines(self):
+		self.append_remove_lines(self.test_filename)
 
 
-	def test_append_mod_remove_line (self):
-		self.append_remove_line(self.test_filename, mod_after_append=True)
+	def test_append_mod_remove_lines (self):
+		self.append_remove_lines(self.test_filename, mod_after_append=True)
 
 
-	def test_append_remove_line_on_empty_file(self):
-		self.append_remove_line(self.empty_filename)
+	def test_append_remove_lines_on_empty_file(self):
+		self.append_remove_lines(self.empty_filename)
 
 
-	def test_append_mod_remove_line_on_empty_file(self):
-		self.append_remove_line(self.empty_filename, mod_after_append=True)
+	def test_append_mod_remove_lines_on_empty_file(self):
+		self.append_remove_lines(self.empty_filename, mod_after_append=True)
 
 
 	def append_remove_section(self, filename, section, mod_after_append=False):
@@ -211,7 +211,7 @@ class TestTextFile(TestCase):
 
 		tf = TextFile(filename)
 
-		tf.remove_line(self.id)
+		tf.remove_lines(self.id)
 		self.assertEquals(open(filename, 'r').read(), '')
 
 		tf.remove_section(self.id)
@@ -252,19 +252,19 @@ class TestTextFile(TestCase):
 			textfile.append_line(self.line, id=self.id)
 
 
-	def test_find_line(self):
+	def test_find_lines(self):
 		textfile = TextFile(self.test_filename)
 
-		self.assertEqual(0, textfile.find_line(self.id))
+		self.assertEqual(0, textfile.find_lines(self.id))
 
 		textfile.append_line(self.line, id=self.id)
-		self.assertEqual(1, textfile.find_line(self.id))
+		self.assertEqual(1, textfile.find_lines(self.id))
 
 		self.append_line_multiple_times(textfile, 4)
-		self.assertEqual(5, textfile.find_line(self.id))
+		self.assertEqual(5, textfile.find_lines(self.id))
 
-		textfile.remove_line(self.id)
-		self.assertEqual(0, textfile.find_line(self.id))
+		textfile.remove_lines(self.id)
+		self.assertEqual(0, textfile.find_lines(self.id))
 
 
 	def test_remove_dups(self):
@@ -273,10 +273,87 @@ class TestTextFile(TestCase):
 		self.append_line_multiple_times(textfile, 4)
 		textfile.append_line(self.line, id=self.id, remove_dups=True)
 
-		self.assertEqual(1, textfile.find_line(self.id))
+		self.assertEqual(1, textfile.find_lines(self.id))
 
 		textfile.append_line(self.line, id=self.id, remove_dups=True)
-		self.assertEqual(1, textfile.find_line(self.id))
+		self.assertEqual(1, textfile.find_lines(self.id))
+
+
+	def test_insert_line_before(self):
+		textfile = TextFile(self.test_filename)
+		line = '1234567890'
+
+		count = textfile.insert_line_before(line, contains='BASH_VERSION')
+		
+		self.assertEqual(1, count)
+		with open(self.test_filename, 'r') as f:
+			lines = f.read().splitlines()
+			self.assertEqual(lines[3], line)
+			self.assertEqual(lines[4], self.test_file.splitlines()[3])
+
+
+	def test_insert_line_after(self):
+		textfile = TextFile(self.test_filename)
+		line = '1234567890'
+
+		count = textfile.insert_line_after(line, contains='BASH_VERSION')
+		
+		self.assertEqual(1, count)
+		with open(self.test_filename, 'r') as f:
+			lines = f.read().splitlines()
+			self.assertEqual(lines[3], self.test_file.splitlines()[3])
+			self.assertEqual(lines[4], line)
+
+
+class TestLineFilter(TestCase):
+
+	def test_match(self):
+		id = TestTextFile.id
+		cp = TextFile.default_comment_prefix
+
+		lf = LineFilter(id=id, comment_prefix=cp)
+
+		self.assertTrue(lf.match('something %s '%cp + id))
+		self.assertTrue(lf.match('%s '%cp + id))
+		self.assertFalse(lf.match(id))
+
+		
+		lf = LineFilter(startswith='python')
+
+		self.assertTrue(lf.match('python is great.'))
+		self.assertTrue(lf.match('python3.4 is painful.'))
+		self.assertFalse(lf.match(id))
+		self.assertFalse(lf.match(''))
+
+		lf = LineFilter(regex='^.*\d+.*$')
+
+		self.assertTrue(lf.match('123'))
+		self.assertTrue(lf.match('why123?'))
+		self.assertTrue(lf.match('1-23'))
+		self.assertTrue(lf.match('.2'))
+		self.assertFalse(lf.match(''))
+		self.assertFalse(lf.match('abcd'))
+		
+		lf = LineFilter(startswith='python', regex='^.*\d+.*$')
+
+		self.assertTrue(lf.match('123'))
+		self.assertTrue(lf.match('python is pretty.'))
+		self.assertFalse(lf.match(''))
+		self.assertFalse(lf.match('abcd'))
+
+		lf = LineFilter(line_no=3)
+		
+		self.assertFalse(lf.match(''))
+		self.assertFalse(lf.match(''))
+		self.assertFalse(lf.match(''))
+		self.assertTrue(lf.match(''))
+		self.assertFalse(lf.match(''))
+
+		lf = LineFilter(count=2, startswith='hi')
+
+		self.assertTrue(lf.match('hi there'))
+		self.assertTrue(lf.match('hilo'))
+		self.assertFalse(lf.match('hi'))
 
 
 if __name__ == '__main__':

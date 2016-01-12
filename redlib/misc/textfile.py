@@ -12,6 +12,52 @@ class TextFileError(Exception):
 	pass
 
 
+class LineFilter:
+	def __init__(self, id=None, startswith=None, contains=None, endswith=None, regex=None, line_no=None, comment_prefix=None, count=six.MAXSIZE):
+		assert id is None or (id is not None and comment_prefix is not None)
+
+		self.re_id 	= re.compile("^.*" + comment_prefix + ".*%s.*$"%id) if id is not None else None
+		self.startswith	= startswith
+		self.contains	= contains
+		self.endswith	= endswith
+		self.regex	= re.compile(regex) if regex is not None else None
+		self.rm_line_no	= line_no
+		self.max_count 	= count
+
+		self.count	= 0
+		self.line_no	= 0
+
+
+	def match(self, line):
+		result = False
+
+		if self.max_count is not None and self.count == self.max_count:
+			return False
+
+		if self.rm_line_no is not None:
+			result = self.line_no == self.rm_line_no
+
+		if not result and self.re_id is not None:
+			result = self.re_id.match(line) is not None
+
+		if not result and self.startswith is not None:
+			result = line.startswith(self.startswith)
+
+		if not result and self.contains is not None:
+			result = line.find(self.contains) > -1
+
+		if not result and self.endswith is not None:
+			result = line.endswith(self.endswith)
+
+		if not result and self.regex is not None:
+			result = self.regex.match(line) is not None
+
+		if result:
+			self.count += 1
+
+		self.line_no += 1
+		return result
+
 
 class TextFile:
 
@@ -63,10 +109,10 @@ class TextFile:
 
 	def append_line(self, line, id=None, remove_dups=False):
 		if remove_dups:
-			count = self.find_line(id)
+			count = self.find_lines(id=id)
 			if count > 0:
 				if count > 1:
-					self.remove_line(id, count=count-1)
+					self.remove_lines(id, count=count-1)
 				return
 
 		with open(self._filepath, 'a+') as f:
@@ -74,43 +120,79 @@ class TextFile:
 			f.write(line + ('\t' + self._comment_prefix + id if id is not None else ''))
 
 
-	def remove_line(self, id, startswith=None, endswith=None, regex=None, count=six.MAXSIZE):
-		if id is None or len(id) == 0:
-			raise TextFileError('need an identifier to find the line to remove')
+	def _insert_line(self, line, linefilter, before=False, after=False):
+		assert before or after
 
 		lines = []
-		re_id = re.compile("^.*" + self._comment_prefix + ".*%s.*$"%id)
-		rm_count = 0
+		line_tb_inserted = line
 
 		with open(self._filepath, 'r') as f:
 			for line in f.read().splitlines():
-				if re_id.match(line) is not None and rm_count < count:
-					rm_count += 1
+				if linefilter.match(line):
+					if after:
+						lines.append(line + linesep)
+						lines.append(line_tb_inserted + linesep)
+					else:
+						lines.append(line_tb_inserted + linesep)
+						lines.append(line + linesep)
+				else:
+					lines.append(line + linesep)
+
+		self.remove_last_linesep_and_write(lines)
+
+		return linefilter.count
+
+
+	def insert_line_before(self, line, id=None, startswith=None, contains=None, endswith=None, regex=None, count=1, line_no=None):
+		linefilter = LineFilter(id=id, startswith=startswith, contains=contains, endswith=endswith, regex=regex, count=count,
+				line_no=line_no, comment_prefix=self._comment_prefix)
+
+
+		return self._insert_line(line, linefilter, before=True, after=False)
+
+
+	def insert_line_after(self, line, id=None, startswith=None, contains=None, endswith=None, regex=None, count=1, line_no=None):
+		linefilter = LineFilter(id=id, startswith=startswith, contains=contains, endswith=endswith, regex=regex, count=count,
+				line_no=line_no, comment_prefix=self._comment_prefix)
+
+
+		return self._insert_line(line, linefilter, before=False, after=True)
+
+
+	def remove_lines(self, id=None, startswith=None, contains=None, endswith=None, regex=None, count=six.MAXSIZE, line_no=None):
+		linefilter = LineFilter(id=id, startswith=startswith, contains=contains, endswith=endswith, regex=regex, count=count,
+				line_no=line_no, comment_prefix=self._comment_prefix)
+
+		lines = []
+
+		with open(self._filepath, 'r') as f:
+			for line in f.read().splitlines():
+				if linefilter.match(line):
 					continue
 				lines.append(line + linesep)
 
+		self.remove_last_linesep_and_write(lines)
+
+		return linefilter.count
+
+
+	def remove_last_linesep_and_write(self, lines):
 		if len(lines) > 0:
 			lines[-1] = lines[-1][:-1]
 
 		with open(self._filepath, 'w') as f:
 			f.writelines(lines)
-				
-		return rm_count
 
 
-	def find_line(self, id):
-		if id is None or len(id) == 0:
-			raise TextFileError('need an identifier to find the line to remove')
-
-		re_id = re.compile("^.*" + self._comment_prefix + ".*%s.*$"%id)
-		count = 0
+	def find_lines(self, id=None, startswith=None, contains=None, endswith=None, regex=None, line_no=None):
+		linefilter = LineFilter(id=id, startswith=startswith, contains=contains, endswith=endswith, regex=regex, line_no=line_no,
+				comment_prefix=self._comment_prefix)
 
 		with open(self._filepath, 'r') as f:
 			for line in f.read().splitlines():
-				if re_id.match(line) is not None:
-					count += 1
+				linefilter.match(line)
 
-		return count
+		return linefilter.count
 
 
 	def append_section(self, text, id=None):
@@ -155,11 +237,7 @@ class TextFile:
 		if rm:
 			raise TextFileError('cannot remove section, end not found')
 
-		if len(lines) > 0:
-			lines[-1] = lines[-1][:-1]
-
-		with open(self._filepath, 'w') as f:
-			f.writelines(lines)
+		self.remove_last_linesep_and_write(lines)
 
 		return removed
 
