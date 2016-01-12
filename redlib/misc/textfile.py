@@ -1,9 +1,9 @@
-from os.path import exists, dirname, join as joinpath, basename
-from os import linesep
 import re
 import sys
 from glob import glob
+from os import linesep
 from shutil import copy
+from os.path import exists, dirname, join as joinpath, basename
 
 import six
 
@@ -13,6 +13,7 @@ class TextFileError(Exception):
 
 
 class LineFilter:
+
 	def __init__(self, id=None, startswith=None, contains=None, endswith=None, regex=None, line_no=None, comment_prefix=None, count=six.MAXSIZE):
 		assert id is None or (id is not None and comment_prefix is not None)
 
@@ -68,16 +69,23 @@ class TextFile:
 
 
 	def __init__(self, filepath, backup=False, comment_prefix=None, backup_ext=None):
-		if not exists(filepath):
-			raise TextFileError('%s does not exist'%filepath)
-
 		self._filepath 		= filepath
 		self._backup 		= backup
 		self._comment_prefix 	= comment_prefix if comment_prefix is not None else self.default_comment_prefix
 		self._backup_ext 	= backup_ext if backup_ext is not None else self.default_backup_ext
 
 
-	def backup(self):
+	def check_file(self, create=False, exc=True):
+		if not exists(self._filepath):
+			if not create and exc:
+				raise TextFileError('%s does not exist'%self._filepath)
+			else:
+				open(self._filepath, 'a').close()
+
+
+	def backup(self, exc=True):
+		self.check_file(exc=exc)
+
 		if not self._backup:
 			return None
 
@@ -115,6 +123,7 @@ class TextFile:
 					self.remove_lines(id, count=count-1)
 				return
 
+		self.backup(exc=False)
 		with open(self._filepath, 'a+') as f:
 			f.write(linesep)
 			f.write(line + ('\t' + self._comment_prefix + id if id is not None else ''))
@@ -122,6 +131,8 @@ class TextFile:
 
 	def _insert_line(self, line, linefilter, before=False, after=False):
 		assert before or after
+
+		self.check_file()
 
 		lines = []
 		line_tb_inserted = line
@@ -160,6 +171,8 @@ class TextFile:
 
 
 	def remove_lines(self, id=None, startswith=None, contains=None, endswith=None, regex=None, count=six.MAXSIZE, line_no=None):
+		self.check_file()
+
 		linefilter = LineFilter(id=id, startswith=startswith, contains=contains, endswith=endswith, regex=regex, count=count,
 				line_no=line_no, comment_prefix=self._comment_prefix)
 
@@ -177,6 +190,8 @@ class TextFile:
 
 
 	def remove_last_linesep_and_write(self, lines):
+		self.backup()
+
 		if len(lines) > 0:
 			lines[-1] = lines[-1][:-1]
 
@@ -185,6 +200,8 @@ class TextFile:
 
 
 	def find_lines(self, id=None, startswith=None, contains=None, endswith=None, regex=None, line_no=None):
+		self.check_file()
+
 		linefilter = LineFilter(id=id, startswith=startswith, contains=contains, endswith=endswith, regex=regex, line_no=line_no,
 				comment_prefix=self._comment_prefix)
 
@@ -196,6 +213,8 @@ class TextFile:
 
 
 	def append_section(self, text, id=None):
+		self.backup(exc=False)
+		
 		with open(self._filepath, 'a+') as f:
 			f.write(linesep)
 			if id is not None:
@@ -209,6 +228,7 @@ class TextFile:
 		if id is None or len(id) == 0:
 			raise TextFileError('need an identifier to find the section to remove')
 
+		self.check_file()
 
 		lines = []
 		re_id_start = re.compile("^.*" + self._comment_prefix + ".*%s%s.*$"%(self.section_start_prefix, id))

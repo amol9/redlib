@@ -54,6 +54,8 @@ class TestTextFile(TestCase):
 	def tearDown(self):
 		os.remove(self.test_filename)
 		os.remove(self.empty_filename)
+		[os.remove(f) for f in glob('*.' + TextFile.default_backup_ext + '*')]
+
 
 	def print_file(self, filename, header=None):
 		if self.dbg_print_file:
@@ -163,8 +165,23 @@ class TestTextFile(TestCase):
 
 
 	def test_file_not_found(self):
-		with self.assertRaises(TextFileError) as a:
-			tf = TextFile(self.noexist_filename)
+		tf = TextFile(self.noexist_filename)
+
+		with self.assertRaises(TextFileError) as e:
+			tf.backup()
+
+		with self.assertRaises(TextFileError) as e:
+			tf.insert_line_before('123', startswith='')
+
+
+	def test_file_creation(self):
+		filename = 'test.txt'
+		textfile = TextFile(filename)
+
+		textfile.append_line(self.line)
+		self.assertTrue(exists(filename))
+
+		os.remove(filename)
 
 
 	def test_remove_nested_section(self):
@@ -219,8 +236,6 @@ class TestTextFile(TestCase):
 
 
 	def test_backup(self):
-		[os.remove(f) for f in glob('*.' + TextFile.default_backup_ext + '*')]
-
 		filename = self.test_filename
 
 		def create_files(suffixes):
@@ -303,6 +318,33 @@ class TestTextFile(TestCase):
 			lines = f.read().splitlines()
 			self.assertEqual(lines[3], self.test_file.splitlines()[3])
 			self.assertEqual(lines[4], line)
+
+
+	def test_remove_lines(self):
+		filename = 'test.txt'
+
+		with open(filename, 'w') as f:
+			for i in range(0, 100):
+				f.write('even' if (i % 2 == 0) else 'odd')
+			f.write('other')
+			f.write('and more text')
+
+		textfile = TextFile(filename)
+		textfile.remove_lines(startswith='even', line_no=100, contains='more')
+
+		with open(filename, 'r') as f:
+			lines = f.read().splitlines()
+			for line in lines:
+				self.assertEqual('odd', line)
+
+		os.remove(filename)
+
+
+	def test_backup_creation(self):
+		textfile = TextFile(self.test_filename, backup=True)
+		textfile.remove_lines(line_no=0)
+
+		self.assertTrue(exists(self.test_filename + '.' + TextFile.default_backup_ext))
 
 
 class TestLineFilter(TestCase):
