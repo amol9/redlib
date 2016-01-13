@@ -1,11 +1,8 @@
-from unittest import defaultTestLoader, runner
 from os.path import dirname, abspath
-import sys
+
+from redlib.testlib.testrunner import TestRunner
 
 
-tests = defaultTestLoader.discover(dirname(abspath(__file__)))
-testRunner = runner.TextTestRunner()
-result = testRunner.run(tests)
-
-sys.exit(not result.wasSuccessful())
+testrunner = TestRunner(dirname(abspath(__file__)))
+testrunner.run_all()
 
