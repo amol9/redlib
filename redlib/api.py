@@ -1,3 +1,6 @@
+from .misc.makeapi import make_api
 
-from . import redsix
+make_api(__name__, __file__, __package__, exclude=['test'])
+
+__path__ = []
 
