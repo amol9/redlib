@@ -1,6 +1,6 @@
 from unittest import TestCase, main as ut_main
 
-from redlib.misc import docstring
+from redlib.misc.docstring import extract_help
 
 
 class TestClass:
@@ -48,7 +48,7 @@ class TestClass:
 class TestExtractHelp(TestCase):
 
 	def test_no_long(self):
-		help = docstring.extract_help(TestClass.add)
+		help = extract_help(TestClass.add)
 
 		self.assertEqual(len(help), 4)
 		self.assertDictEqual(help, {'short'	: 'Add two numbers.',
@@ -58,7 +58,7 @@ class TestExtractHelp(TestCase):
 
 
 	def test_multiline_short_and_long(self):
-		help = docstring.extract_help(TestClass.div)
+		help = extract_help(TestClass.div)
 
 		self.assertEqual(len(help), 4)
 		self.assertDictEqual(help, {'short'	: 'Divide  first number by second number.\nNote: result will be float.',
@@ -68,7 +68,7 @@ class TestExtractHelp(TestCase):
 
 
 	def test_no_short_multiline_arg_help(self):
-		help = docstring.extract_help(TestClass.sub)
+		help = extract_help(TestClass.sub)
 
 		self.assertEqual(len(help), 4)
 		self.assertDictEqual(help, {'short'	: None,
@@ -78,7 +78,7 @@ class TestExtractHelp(TestCase):
 
 
 	def test_one_arg_missing(self):
-		help = docstring.extract_help(TestClass.mul)
+		help = extract_help(TestClass.mul)
 
 		self.assertEqual(len(help), 3)
 		self.assertDictEqual(help, {'short'	: 'Multiply two numbers.',
@@ -87,13 +87,13 @@ class TestExtractHelp(TestCase):
 
 
 	def test_no_docstring(self):
-		help = docstring.extract_help(TestClass.mod)
+		help = extract_help(TestClass.mod)
 
 		self.assertEqual(len(help), 2)
 
 
 	def test_only_short(self):
-		help = docstring.extract_help(TestClass.ceil)
+		help = extract_help(TestClass.ceil)
 
 		self.assertEqual(len(help), 2)
 		self.assertDictEqual(help, {'short'	: 'Return nearest greater integer.',
@@ -101,7 +101,7 @@ class TestExtractHelp(TestCase):
 
 
 	def test_colon_in_arg_help(self):
-		help = docstring.extract_help(TestClass.floor)
+		help = extract_help(TestClass.floor)
 
 		self.assertEqual(len(help), 3)
 		self.assertDictEqual(help, {'short'	: 'Return nearest smaller integer.',

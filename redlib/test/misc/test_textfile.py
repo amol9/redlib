@@ -4,13 +4,13 @@ from glob import glob
 from os.path import exists
 
 from redlib.misc.textfile import TextFile, TextFileError, LineFilter
-from redlib.misc.docstring import trim
+from redlib.misc.docstring import trim_docstring
 
 
 class TestTextFile(TestCase):
 	dbg_print_file = False 
 
-	test_file = trim(
+	test_file = trim_docstring(
 	'''# this is a test file, like a BASH script
 
 	# if running bash
@@ -22,7 +22,7 @@ class TestTextFile(TestCase):
 	fi
 	''')
 
-	more1 = trim(
+	more1 = trim_docstring(
 	'''# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
 	HISTSIZE=1000
 	HISTFILESIZE=2000
@@ -30,7 +30,7 @@ class TestTextFile(TestCase):
 
 	line = 'export PATH="$PATH:/home/user/bin'
 
-	section = trim(
+	section = trim_docstring(
 	'''# set PATH so it includes user's private bin if it exists
 	if [ -d "$HOME/bin" ] ; then
 	    PATH="$HOME/bin:$PATH"

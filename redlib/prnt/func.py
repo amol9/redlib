@@ -3,8 +3,9 @@
 import sys
 
 from ..colors.colortrans import rgb2short
-from ..colors import colorlist
-from ..system import is_linux, terminalsize
+from ..colors.clist import colorlist
+from ..system.common import is_linux
+from ..system.terminalsize import get_terminal_size
 
 
 __all__ = ['printc', 'prints', 'print_colorlist']
@@ -40,7 +41,7 @@ def prints(msg):
 def print_colorlist():
 	count = 0
 	color_name_col_width = 22
-	terminal_width, _ = terminalsize.get_terminal_size()
+	terminal_width, _ = get_terminal_size()
 	colors_per_line = int(terminal_width / (color_name_col_width + 3))
 
 	for name, value in colorlist.items():

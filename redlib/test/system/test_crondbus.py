@@ -2,7 +2,7 @@ from unittest import TestCase, main as ut_main
 import os
 import subprocess
 
-from redlib.system import CronDBus, CronDBusError, sys_command
+from redlib.system.crondbus import CronDBus, CronDBusError, sys_command
 
 
 cronenv = {

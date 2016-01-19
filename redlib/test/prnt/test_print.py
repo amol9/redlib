@@ -1,6 +1,6 @@
 from unittest import TestCase, main as ut_main
 
-from redlib.prnt import prints, printc, print_colorlist
+from redlib.prnt.func import prints, printc, print_colorlist
 
 
 class TestPrint(TestCase):

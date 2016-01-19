@@ -1,4 +1,4 @@
-from redlib.system import *
+from redlib.system.common import *
 if is_py3():
 	from html.parser import HTMLParser
 else:	
@@ -8,7 +8,7 @@ from xml.etree.ElementTree import XMLParser, Element, SubElement, ElementTree
 import re
 import sys
 
-from . import HtmlParserDebugger
+from .htmlparser_debugger import HtmlParserDebugger
 
 
 __all__ = ['HtmlParser', 'HtmlStripper']
