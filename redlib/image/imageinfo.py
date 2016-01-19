@@ -1,9 +1,12 @@
-#source: https://code.google.com/p/bfg-pages/source/browse/trunk/pages/getimageinfo.py
+# source: https://code.google.com/p/bfg-pages/source/browse/trunk/pages/getimageinfo.py
 
 from io import BytesIO
 import struct
 import re
 import string
+
+
+__all__ = ['get_image_info']
 
 
 def get_image_info(data, filepath=None):

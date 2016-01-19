@@ -1,3 +1,6 @@
+__all__ = ['colorlist']
+
+
 colorlist = {
 	"aliceblue":            '0xf0f8ff',
 	"antiquewhite":         '0xfaebd7',

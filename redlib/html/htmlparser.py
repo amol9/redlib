@@ -11,6 +11,9 @@ import sys
 from . import HtmlParserDebugger
 
 
+__all__ = ['HtmlParser', 'HtmlStripper']
+
+
 class HtmlParser(HTMLParser):
 	def __init__(self, skip_tags=[], debugger=None):
 		self._root = None

@@ -3,6 +3,9 @@ from unittest import TestLoader
 from functools import cmp_to_key as _CmpToKey
 
 
+__all__ = ['order', 'replace_default_ordering', 'restore_default_ordering']
+
+
 # copied from unittest/loader/TestLoader
 # modified to sort functions rather than names
 def testorder_getTestCaseNames(self, testCaseClass):

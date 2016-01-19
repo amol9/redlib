@@ -2,6 +2,9 @@ from unittest import defaultTestLoader, runner
 import sys
 
 
+__all__ = ['TestRunner']
+
+
 class TestRunner:
 
 	def __init__(self, path):

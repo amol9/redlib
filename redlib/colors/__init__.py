@@ -1,2 +1,0 @@
-from .clist import colorlist
-

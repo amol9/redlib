@@ -18,7 +18,7 @@ class _RedMetaPathImporter(object):
 			self.known_modules[self.name + "." + fullname] = mod
 
 
-	def _get_module(self, fullname):
+	'''def _get_module(self, fullname):
 		print 'get module:', fullname
 		mod = self.known_modules.get(self.name + "." + fullname, None)
 		if mod is None:
@@ -28,7 +28,7 @@ class _RedMetaPathImporter(object):
 				raise ImportError('cannot import name ' + fullname)
 
 		mod.load()
-		return mod
+		return mod'''
 
 
 	def get_module(self, fullname):
@@ -54,12 +54,8 @@ class _RedMetaPathImporter(object):
 
 
 	def __get_module(self, fullname):
-		print '__ get module:', fullname
 		try:
-			#mod = self.known_modules[fullname]
-			#mod.load()
 			return self.get_module(fullname)
-			#return self._get_module(fullname)
 		except KeyError:
 			raise ImportError("This loader does not know module " + fullname)
 

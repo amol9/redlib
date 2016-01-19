@@ -7,6 +7,9 @@ from ..colors import colorlist
 from ..system import is_linux, terminalsize
 
 
+__all__ = ['printc', 'prints', 'print_colorlist']
+
+
 def printc(msg, color=None):
 	colorval = None
 	if color is not None:
