@@ -1,6 +1,9 @@
 from time import sleep
 
 
+__all__ = ['Retry']
+
+
 class Retry:
 	def __init__(self, retries=3, delay=None, final_exc=None, exp_bkf=True):
 		self.retries = retries

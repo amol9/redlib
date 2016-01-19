@@ -4,7 +4,10 @@ import re
 import os
 
 
-def trim(doc_string):
+__all__ = ['trim_docstring', 'extract_help_w_regex', 'extract_help']
+
+
+def trim_docstring(doc_string):
 	if not doc_string:
 		return ''
 	# Convert tabs to spaces (following the normal Python rules)
@@ -144,7 +147,7 @@ extract_help.__doc__ = \
 extract_help_w_regex.__doc__ = \
 	"""Extract help text from doc string of a function using regex. (Deprecated)"""
 
-trim.__doc__ = \
+trim_docstring.__doc__ = \
 	"""Trim leading and trailing blank lines as well as tabs from docstring.
 
 	Source: https://www.python.org/dev/peps/pep-0257/"""

@@ -1,3 +1,5 @@
+__all__ = ['Singleton']
+
 
 class Singleton:
 	classtype = None

@@ -3,6 +3,10 @@ from subprocess import check_output, CalledProcessError
 
 from .common import is_py3
 
+
+__all__ = ['sys_command', 'DEVNULL']
+
+
 if is_py3():
 	from subprocess import DEVNULL
 else:

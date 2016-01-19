@@ -8,6 +8,9 @@ from os.path import exists, dirname, join as joinpath, basename
 import six
 
 
+__all__ = ['TextFile', 'TextFileError']
+
+
 class TextFileError(Exception):
 	pass
 

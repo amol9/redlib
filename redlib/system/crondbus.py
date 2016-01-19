@@ -2,12 +2,15 @@ import re
 import os
 import sys
 
-from . import sys_command, is_linux
+from .sys_command import sys_command
+from .common import is_linux
+
+
+__all__ = ['in_cron', 'CronDBus', 'CronDBusError', 'uses_dbus_in_cron']
 
 
 def in_cron():
 	return not os.isatty(sys.stdin.fileno()) or os.environ.get('TERM', None) is None
-
 
 
 class CronDBusError(Exception):
