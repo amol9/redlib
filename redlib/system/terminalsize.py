@@ -7,6 +7,9 @@ import shlex
 import struct
 import platform
 import subprocess
+
+
+__all__ = ['get_terminal_size']
  
  
 def get_terminal_size():
