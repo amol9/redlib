@@ -1,4 +1,6 @@
-from urllib2 import urlopen
+
+from six.moves.urllib.request import urlopen
+
 
 tlds_list_url = 'http://data.iana.org/TLD/tlds-alpha-by-domain.txt'
 

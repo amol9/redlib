@@ -2,6 +2,8 @@ import sys
 from unittest import TestLoader
 from functools import cmp_to_key as _CmpToKey
 
+from ..py23.lang23 import cmp
+
 
 __all__ = ['order', 'replace_default_ordering', 'restore_default_ordering']
 

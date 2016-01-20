@@ -1,11 +1,17 @@
-from types import ModuleType
 import sys
+from types import ModuleType
 from pkgutil import iter_modules
 from importlib import import_module
 from os.path import dirname, join as joinpath
 
 
 __all__ = ['make_api', 'Move']
+
+
+# fix:
+# recurse dirs
+# duplicate name check
+# issue deprecation warning on moves
 
 
 class _RedMetaPathImporter(object):
@@ -101,7 +107,7 @@ class GenModule(ModuleType):
 
 		for _, modname, is_pkg in iter_modules(path=[joinpath(self._dirpath, self._name)]):
 			if not is_pkg:
-				mod = import_module('.' + modname, self._package + '.' + self._name)
+				mod = import_module(self._package + '.' + self._name + '.' + modname)
 				all = getattr(mod, '__all__', None)
 
 				if all is not None:

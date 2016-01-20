@@ -1,12 +1,9 @@
-from redlib.system.common import *
-if is_py3():
-	from html.parser import HTMLParser
-else:	
-	from HTMLParser import HTMLParser
-
-from xml.etree.ElementTree import XMLParser, Element, SubElement, ElementTree
 import re
 import sys
+from xml.etree.ElementTree import XMLParser, Element, SubElement, ElementTree
+
+from ..system.common import *
+from six.moves.html_parser import HTMLParser
 
 from .htmlparser_debugger import HtmlParserDebugger
 

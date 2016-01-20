@@ -4,7 +4,8 @@ from os.path import join as joinpath
 from glob import glob
 import os
 
-from redlib.html.htmlparser import HtmlParser, HtmlParserDebugger
+from redlib.web.htmlparser import HtmlParser
+from redlib.web.htmlparser_debugger import HtmlParserDebugger
 from redlib.test.common import get_test_data_dir
 
 

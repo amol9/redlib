@@ -1,5 +1,6 @@
-from urllib2 import urlopen
 import re
+
+from six.moves.urllib.request import urlopen
 
 
 src_url = 'https://raw.githubusercontent.com/WPO-Foundation/webpagetest/master/agent/wpthook/cdn.h'

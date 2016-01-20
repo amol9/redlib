@@ -4,6 +4,7 @@ import sys
 
 from .sys_command import sys_command
 from .common import is_linux
+from ..py23.lang23 import *
 
 
 __all__ = ['in_cron', 'CronDBus', 'CronDBusError', 'uses_dbus_in_cron']
@@ -48,7 +49,7 @@ class CronDBus:
 		dbusd_pids = pids.split()
 
 		dbus_session_bus_addr = None
-		dbus_session_bus_addr_re = re.compile(b'%s.*?\x00'%self.dbus_sba_var)
+		dbus_session_bus_addr_re = re.compile(b('%s.*?\x00'%self.dbus_sba_var))
 
 		for pid in dbusd_pids:
 			self._dbusd_env = None
@@ -59,7 +60,8 @@ class CronDBus:
 			if len(matches) == 0:
 				continue
 
-			dbus_session_bus_addr = matches[0][matches[0].index('=') + 1:-1]
+			match0 = s(matches[0])
+			dbus_session_bus_addr = match0[match0.index('=') + 1:-1]
 
 			os.environ[self.dbus_sba_var] = dbus_session_bus_addr
 			self._remove_list.append(self.dbus_sba_var)
@@ -80,12 +82,13 @@ class CronDBus:
 		if self.environ_var_set(var) and not overwrite:
 			return
 
-		matches = re.compile(b'%s.*?\x00'%var).findall(self._dbusd_env)
+		matches = re.compile(b('%s.*?\x00'%var)).findall(self._dbusd_env)
 
 		if len(matches) == 0:
 			raise CronDBusError('%s not found in dbus-daemon environment'%var)
 		else:
-			val = matches[0][matches[0].index('=') + 1:-1]
+			match0 = s(matches[0])
+			val = match0[match0.index('=') + 1:-1]
 			os.environ[var] = val
 			self._remove_list.append(var)
 

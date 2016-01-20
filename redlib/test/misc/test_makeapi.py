@@ -1,4 +1,4 @@
-from unittest import TestCase, main as ut_main
+from unittest import TestCase, main as ut_main, skip
 import sys
 
 
@@ -24,11 +24,11 @@ class TestMakeAPI(TestCase):
 		for i in py23_dir:
 			self.assertIn(i, dir(py23))
 
-		from redlib.api import web
+		from redlib.api import net
 
-		web_dir = ['cdns', 'tlds', 'AbsUrl']
-		for i in web_dir:
-			self.assertIn(i, dir(web))
+		net_dir = ['cdns', 'tlds', 'AbsUrl']
+		for i in net_dir:
+			self.assertIn(i, dir(net))
 
 
 	def test_moves(self):
@@ -52,7 +52,7 @@ class TestMakeAPI(TestCase):
 		for e in excluded:
 			self.assertNotIn(e, known_modules)
 
-		included = ['colors', 'html', 'image', 'misc', 'prnt', 'py23', 'system', 'testlib', 'web']
+		included = ['colors', 'net', 'image', 'misc', 'prnt', 'py23', 'system', 'testlib', 'web']
 		for i in included:
 			self.assertIn(i, known_modules)
 
