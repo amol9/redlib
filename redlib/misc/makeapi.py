@@ -107,39 +107,31 @@ class GenModule(ModuleType):
 
 		for _, modname, is_pkg in iter_modules(path=[joinpath(self._dirpath, self._name)]):
 			if not is_pkg:
-				mod = import_module(self._package + '.' + self._name + '.' + modname)
-				all = getattr(mod, '__all__', None)
-
-				if all is not None:
-					for member in all:
-						# add member to this module
-						setattr(self, member, getattr(mod, member, None))
-						self._members.append(member)
-
-						# check moves
-						impname = self._name + '.' + member
-						for m in self._moves:
-							if m.new == impname:
-								setattr(self, m.old_member_name(), getattr(mod, member, None))
-
-
-
+				self.add_module(self._package + '.' + self._name + '.' + modname)
 
 		self._loaded = True
-	
+
+
+	def add_module(self, module):
+		mod = import_module(module)
+		all = getattr(mod, '__all__', None)
+
+		if all is not None:
+			for member in all:
+				# add member to this module
+				setattr(self, member, getattr(mod, member, None))
+				self._members.append(member)
+
+				# check moves
+				impname = self._name + '.' + member
+				for m in self._moves:
+					if m.new == impname:
+						setattr(self, m.old_member_name(), getattr(mod, member, None))
+
 
 	def __dir__(self):
 		return self._members
 
-
-def add_modules(importer, dirpath, package_name, exclude, moves):
-	for _, name, is_pkg in iter_modules([dirpath]):
-		if name not in exclude:
-			pkg_moves = []
-			for move in moves:
-				if move.old.startswith(name):
-					pkg_moves.append(move)
-			importer._add_module(GenModule(name, dirpath, package_name, pkg_moves), name)
 
 
 class Move:
@@ -154,13 +146,56 @@ class Move:
 	def new_member_name(self):
 		return self.new[self.new.rfind('.') + 1:]
 
-	
-def make_api(module_name, api_mod_filepath, package_name, exclude=[], moves=[]):
-	red_importer = _RedMetaPathImporter(module_name)
 
-	exclude.append(module_name[module_name.rfind('.') + 1:])
+class APIPackage:
+	def __init__(self, module_name, filepath, exclude, moves):
+		self.module_name 	= module_name
+		self.parent_package 	= module_name[0: module_name.rfind('.')]
+		self.filepath		= filepath
+		self.exclude		= exclude
+		self.moves		= moves
 
-	add_modules(red_importer, dirname(api_mod_filepath), package_name, exclude, moves)
+		self.exclude.append(module_name[module_name.rfind('.') + 1:])
+		self.importer = _RedMetaPathImporter(module_name)
+
+
+	def add_modules(self):
+		non_pkg = []
+		dirpath = dirname(self.filepath)
+
+		for _, name, is_pkg in iter_modules([dirpath]):
+			if name not in self.exclude:
+				pkg_moves = []
+				if not is_pkg:
+					non_pkg.append(name)
+					continue
+
+				for move in self.moves:
+					if move.old.startswith(name):
+						pkg_moves.append(move)
+
+				self.importer._add_module(GenModule(name, dirpath, self.parent_package, pkg_moves), name)
+
+		if len(non_pkg) > 0:
+			api_module = import_module(self.module_name)
+			non_pkg_moves = [m for m in self.moves if m.new.find('.') == -1]
+
+			for modname in non_pkg:
+				mod = import_module(self.parent_package + '.' + modname)
+				all = getattr(mod, '__all__', None)
+
+				if all is not None:
+					for member in all:
+						setattr(api_module, member, getattr(mod, member, None))
+
+					for m in non_pkg_moves:
+						if m.new == member:
+							setattr(api_module, m.old, getattr(mod, member, None))
+
+
+def make_api(module_name, api_mod_filepath, exclude=[], moves=[]):
+	api_package = APIPackage(module_name, api_mod_filepath, exclude, moves)
+	api_package.add_modules()
 
 	if sys.meta_path:
 		for i, importer in enumerate(sys.meta_path):
@@ -169,5 +204,5 @@ def make_api(module_name, api_mod_filepath, package_name, exclude=[], moves=[]):
 				del sys.meta_path[i]
 				break
 			del i, importer
-	sys.meta_path.append(red_importer)
+	sys.meta_path.append(api_package.importer)
 

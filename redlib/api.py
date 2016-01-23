@@ -1,12 +1,13 @@
 from .misc.makeapi import make_api, Move
 
 moves = [
-	Move('misc.trim', 'misc.trim_docstring')
+	Move('misc.trim', 'misc.trim_docstring'),
+	Move('mod_version', 'get_version')
 ]
 
-exclude = ['test', 'version']
+exclude = ['test']
 
-make_api(__name__, __file__, __package__, exclude=exclude, moves=moves)
+make_api(__name__, __file__, exclude=exclude, moves=moves)
 
 __path__ = []
 

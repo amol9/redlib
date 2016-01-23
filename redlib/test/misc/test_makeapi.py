@@ -32,9 +32,11 @@ class TestMakeAPI(TestCase):
 
 
 	def test_moves(self):
-		from redlib.api.misc import trim
-		
+		from redlib.api.misc import trim		
 		self.assertEqual(trim.__name__, 'trim_docstring')
+
+		from redlib.api import mod_version
+		self.assertEqual(mod_version.__name__, 'get_version')
 
 
 	def test_exclude(self):
@@ -55,6 +57,12 @@ class TestMakeAPI(TestCase):
 		included = ['colors', 'net', 'image', 'misc', 'prnt', 'py23', 'system', 'testlib', 'web']
 		for i in included:
 			self.assertIn(i, known_modules)
+
+
+	def test_root_import(self):
+		import redlib.api
+
+		self.assertIn('get_version', dir(redlib.api))
 
 
 if __name__ == '__main__':
