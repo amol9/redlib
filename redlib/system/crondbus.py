@@ -21,21 +21,32 @@ class CronDBusError(Exception):
 class CronDBus:
 	dbus_sba_var = 'DBUS_SESSION_BUS_ADDRESS'
 
-	def __init__(self):
+	def __init__(self, vars=[]):
 		if not is_linux():
 			raise CronDBusError('cron/dbus only supported on linux')
 
-		self._dbusd_environ = None
+		self._dbusd_env = None
 		self._remove_list = []
+		self._vars = vars
 
 
 	def setup(self):
 		if not self.cron_session():
-			raise CronDBusError('not a cron session')
+			return
 
 		if self.environ_var_set(self.dbus_sba_var):
 			return
 
+		dbus_session_bus_addr = self.get_dbusd_env()
+
+		os.environ[self.dbus_sba_var] = dbus_session_bus_addr
+		self._remove_list.append(self.dbus_sba_var)
+
+		for var in self._vars:
+			self.add_var(var)
+
+	
+	def get_dbusd_env(self):
 		uid = os.getuid()
 		if uid is None:
 			raise CronDBusError('could not get uid')
@@ -47,7 +58,7 @@ class CronDBus:
 			raise CronDBusError('could not get pid of dbus-daemon')
 
 		dbusd_pids = pids.split()
-
+	
 		dbus_session_bus_addr = None
 		dbus_session_bus_addr_re = re.compile(b('%s.*?\x00'%self.dbus_sba_var))
 
@@ -63,14 +74,12 @@ class CronDBus:
 			match0 = s(matches[0])
 			dbus_session_bus_addr = match0[match0.index('=') + 1:-1]
 
-			os.environ[self.dbus_sba_var] = dbus_session_bus_addr
-			self._remove_list.append(self.dbus_sba_var)
-			break
-	
+			return dbus_session_bus_addr
+
 
 	def remove(self):
 		if not self.cron_session():
-			raise CronDBusError('not a cron session')
+			return
 
 		for var in self._remove_list:
 			os.environ.pop(var)
@@ -79,8 +88,14 @@ class CronDBus:
 
 
 	def add_var(self, var, overwrite=False):
+		if not self.cron_session():
+			return
+
 		if self.environ_var_set(var) and not overwrite:
 			return
+
+		if self._dbusd_env is None:
+			self.get_dbusd_env()
 
 		matches = re.compile(b('%s.*?\x00'%var)).findall(self._dbusd_env)
 

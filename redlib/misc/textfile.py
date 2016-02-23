@@ -215,6 +215,13 @@ class TextFile:
 		return linefilter.count
 
 
+	def find_section(self, id):
+		self.check_file()
+
+		with open(self._filepath, 'r') as f:
+			return f.read().find(self._comment_prefix + self.section_start_prefix + id) > -1
+
+
 	def append_section(self, text, id=None):
 		self.backup(exc=False)
 		
