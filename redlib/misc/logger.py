@@ -13,8 +13,8 @@ class Logger():
 	else:
 		levels = dict([(k.lower(), v) for (k, v) in logging._levelNames.items() if type(k) == str and v != 0])
 
-	def __init__(self):
-		self._log = logging.getLogger('wallp')
+	def __init__(self, name='redlib'):
+		self._log = logging.getLogger(name)
 		self._log.propagate = False
 		self._to_stdout = False
 

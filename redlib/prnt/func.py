@@ -8,7 +8,7 @@ from ..system.common import is_linux
 from ..system.terminalsize import get_terminal_size
 
 
-__all__ = ['printc', 'prints', 'print_colorlist']
+__all__ = ['printc', 'prints', 'print_colorlist', 'format_size']
 
 
 def printc(msg, color=None):
@@ -38,6 +38,10 @@ def prints(msg):
 		sys.stdout.flush()
 
 
+def printn(msg):
+	print(msg)
+
+
 def print_colorlist():
 	count = 0
 	color_name_col_width = 22
@@ -56,6 +60,18 @@ def print_colorlist():
 			print('')
 	if is_linux():
 		print('\x1b[0m')
+
+
+def format_size(num, suffix='b'):
+		'''source: http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
+			by: Sridhar Ratnakumar'''
+
+		for unit in ['','K','M','G','T','P','E','Z']:
+			if abs(num) < 1024.0:
+				return "%3.1f%s%s" % (num, unit, suffix)
+			num /= 1024.0
+
+		return "%.1f%s%s" % (num, 'Y', suffix)
 
 
 # docs:

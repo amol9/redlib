@@ -1,6 +1,7 @@
 from textwrap import wrap
 
 from redlib.api.system import get_terminal_size
+from .func import prints, printn
 
 
 __all__ = ['ColumnPrinter']
@@ -15,6 +16,8 @@ class ColumnPrinter:
 		self._ralign		= ralign
 
 		self.make_fmt_string()
+
+		self._progress_col	= None
 
 
 	def make_fmt_string(self):
@@ -39,8 +42,11 @@ class ColumnPrinter:
 		self._last_col_width = last_col_width
 
 
-	def printf(self, *args):
+	def printf(self, *args, **kwargs):
 		col_count = len(self._cols)
+		progress_col = kwargs.get('progress_col', None)
+		col_cb = kwargs.get('col_cb', False)
+		ret_cb = {}
 
 		if len(args) < col_count:
 			args_copy = list(args) + ([''] * (col_count - len(args)))
@@ -48,6 +54,10 @@ class ColumnPrinter:
 			args_copy = list(args[0 : col_count])
 		else:
 			args_copy = list(args)
+
+		print_fn = printn
+		if progress_col is not None:
+			print_fn = prints
 
 		last_col_wrap = False
 		for i in range(0, len(args_copy)):
@@ -62,9 +72,45 @@ class ColumnPrinter:
 
 
 		if not last_col_wrap:
-			print(self._fmt_string.format(*args_copy))
+			print_fn(self._fmt_string.format(*args_copy))
 		else:
 			print(self._fmt_string.format(*(args_copy[0:-1] + [args_copy[-1][0]])))
 			for line in args_copy[-1][1:]:
 				print(self._fmt_string.format(*([''] * (len(args_copy) - 1) + [line])))
+
+		if progress_col is not None:
+			def progress_cb(progress):
+				if len(progress) > self._cols[progress_col]:
+					progress = progress[0 : self._cols[progress_col]]
+				args_copy[progress_col] = progress
+
+				prints('\r')
+				prints(self._fmt_string.format(*args_copy))
+
+
+			def progress_cp(msg=None):
+				if msg is not None:
+					progress_cb(msg)
+				print('')
+
+
+			ret_cb['progress_cb'] = progress_cb
+			ret_cb['progress_cp'] = progress_cp
+
+		if col_cb:
+			def col_update_cb(col, msg):
+				if len(msg) > self._cols[col]:
+					msg = msg[0 : self._cols[col]]
+				args_copy[col] = msg
+
+				prints('\r')
+				prints(self._fmt_string.format(*args_copy))
+				
+			ret_cb['col_cb'] = col_update_cb
+
+		return ret_cb
+
+	def print_progress(self, *args, **kwargs):
+		self._progress_col = args[-1]
+		return self.printf(*args[0 : -1])
 
