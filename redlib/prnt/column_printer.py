@@ -7,6 +7,13 @@ from .func import prints, printn
 __all__ = ['ColumnPrinter']
 
 
+class Callbacks:
+	def __init__(self):
+		self.progress_cb	= None
+		self.progress_cp	= None
+		self.col_cb		= None
+
+
 class ColumnPrinter:
 
 	def __init__(self, cols=[10, -1], ralign=[]):
@@ -46,7 +53,7 @@ class ColumnPrinter:
 		col_count = len(self._cols)
 		progress_col = kwargs.get('progress_col', None)
 		col_cb = kwargs.get('col_cb', False)
-		ret_cb = {}
+		ret_cb = Callbacks()
 
 		if len(args) < col_count:
 			args_copy = list(args) + ([''] * (col_count - len(args)))
@@ -94,8 +101,8 @@ class ColumnPrinter:
 				print('')
 
 
-			ret_cb['progress_cb'] = progress_cb
-			ret_cb['progress_cp'] = progress_cp
+			ret_cb.progress_cb = progress_cb
+			ret_cb.progress_cp = progress_cp
 
 		if col_cb:
 			def col_update_cb(col, msg):
@@ -106,7 +113,7 @@ class ColumnPrinter:
 				prints('\r')
 				prints(self._fmt_string.format(*args_copy))
 				
-			ret_cb['col_cb'] = col_update_cb
+			ret_cb.col_cb = col_update_cb
 
 		return ret_cb
 
