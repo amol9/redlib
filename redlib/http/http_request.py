@@ -3,27 +3,24 @@ import sys
 from functools import partial
 import socket
 
-from redlib.api.system import *
-from redlib.api.prnt import prints, format_size
 from enum import Enum
 
-#from ..globals import Const
+from redlib.api.system import *
+from redlib.api.prnt import prints, format_size
 from .cache import Cache
-#from .exc import DownloadError, TimeoutError
-#from ..util.printer import printer
 
 
 if is_py3():
-	from urllib.error import HTTPError as UHTTPError, URLError
+	from urllib.error import HTTPError as UrllibHTTPError, URLError
 	from urllib.request import urlopen, Request
 else:
-	from urllib2 import HTTPError as UHTTPError, urlopen, URLError, Request
+	from urllib2 import HTTPError as UrllibHTTPError, urlopen, URLError, Request
 
 
 __all__ = ['HttpErrorType', 'HttpError', 'GlobalOptions', 'RequestOptions', 'HttpRequest']
 
 
-HttpErrorType = Enum('HttpErrorType', ['other', 'timeout'])
+HttpErrorType = Enum('HttpErrorType', ['other', 'timeout', 'size'])
 
 
 class HttpError(Exception):
@@ -36,17 +33,18 @@ class HttpError(Exception):
 
 class GlobalOptions:
 
-	def __init__(self, cache_dir=None, chunksize=50*1024, headers=None, timeout=120):
-		self.cache_dir	= cache_dir
-		self.chunksize	= chunksize
-		self.headers	= headers
-		self.timeout	= timeout
+	def __init__(self, cache_dir=None, chunksize=50*1024, headers=None, timeout=120, max_content_length=1024*1024*10):
+		self.cache_dir		= cache_dir
+		self.chunksize		= chunksize
+		self.headers		= headers
+		self.timeout		= timeout
+		self.max_content_length	= max_content_length
 
 
 class RequestOptions:
 
 	def __init__(self, save_filepath=None, nocache=False, open_file=None, headers=None,
-			progress_cb=None, progress_cp=None, content_length_cb=None):
+			progress_cb=None, progress_cp=None, content_length_cb=None, max_content_length=None):
 
 		self.save_filepath	= save_filepath
 		self.nocache		= nocache
@@ -55,6 +53,7 @@ class RequestOptions:
 		self.progress_cb	= progress_cb
 		self.progress_cp	= progress_cp
 		self.content_length_cb	= content_length_cb
+		self.max_content_length	= max_content_length
 
 
 	def call_progress_cb(self, value):
@@ -87,6 +86,8 @@ class HttpRequest:
 
 	def get(self, url, request_options=None):
 		roptions = RequestOptions() if request_options is None else request_options
+		if roptions.max_content_length is None or (roptions.max_content_length > self._goptions.max_content_length):
+			roptions.max_content_length = self._goptions.max_content_length
 
 		cached_res = self.check_cache(url, roptions)
 		if cached_res:
@@ -102,6 +103,10 @@ class HttpRequest:
 
 		out = self.get_outbuffer(roptions)
 		content_length = self.get_content_length(res, roptions)
+
+		if content_length is not None and content_length > roptions.max_content_length:		# take care of open buffers
+			res.close()
+			raise HttpError('max content length exceeded', err_type=HttpErrorType.size)
 
 		content_read = self.read_response_chunks(res, out, content_length, roptions)
 		
@@ -138,6 +143,10 @@ class HttpRequest:
 			out.write(buf)
 
 			content_read += len(chunk)
+
+			if roptions.max_content_length is not None and content_read > roptions.max_content_length:
+				res.close()
+				raise HttpError('max content length exceeded', err_type=HttpErrorType.size)
 
 			if content_length is not None:
 				roptions.call_progress_cb((content_read / content_length) * 100)
@@ -195,7 +204,7 @@ class HttpRequest:
 			r = func(*args, **kwargs)
 			return r
 
-		except (URLError, UHTTPError) as e:
+		except (URLError, UrllibHTTPError) as e:
 			roptions.progress_cp()
 
 			if type(e.reason) == socket.timeout:
@@ -227,12 +236,12 @@ class HttpRequest:
 			return False
 
 
-	def exists(self, url, timeout):
+	def exists(self, url, timeout=10):
 		try:
 			res = urlopen(url, timeout=timeout)
 			if res.code == 200:
 				res.close()
 				return True
-		except (URLError, UHTTPError) as e:
+		except (URLError, UrllibHTTPError) as e:
 			return False
 

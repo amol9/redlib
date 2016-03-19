@@ -12,6 +12,7 @@ class Callbacks:
 		self.progress_cb	= None
 		self.progress_cp	= None
 		self.col_cb		= None
+		self.col_update_cp	= None
 
 
 class ColumnPrinter:
@@ -24,7 +25,7 @@ class ColumnPrinter:
 
 		self.make_fmt_string()
 
-		self._progress_col	= None
+		self._row_in_progress	= False
 
 
 	def make_fmt_string(self):
@@ -50,6 +51,10 @@ class ColumnPrinter:
 
 
 	def printf(self, *args, **kwargs):
+		if self._row_in_progress:
+			self._row_in_progress = False
+			print('')
+
 		col_count = len(self._cols)
 		progress_col = kwargs.get('progress_col', None)
 		col_cb = kwargs.get('col_cb', False)
@@ -63,7 +68,8 @@ class ColumnPrinter:
 			args_copy = list(args)
 
 		print_fn = printn
-		if progress_col is not None:
+		if progress_col is not None or col_cb:
+			self._row_in_progress = True
 			print_fn = prints
 
 		last_col_wrap = False
@@ -94,12 +100,11 @@ class ColumnPrinter:
 				prints('\r')
 				prints(self._fmt_string.format(*args_copy))
 
-
 			def progress_cp(msg=None):
 				if msg is not None:
 					progress_cb(msg)
 				print('')
-
+				self._row_in_progress = False
 
 			ret_cb.progress_cb = progress_cb
 			ret_cb.progress_cp = progress_cp
@@ -112,10 +117,16 @@ class ColumnPrinter:
 
 				prints('\r')
 				prints(self._fmt_string.format(*args_copy))
+
+			def col_update_cp():
+				print('')
+				self._row_in_progress = False
 				
 			ret_cb.col_cb = col_update_cb
+			ret_cb.col_update_cp = col_update_cp
 
 		return ret_cb
+
 
 	def print_progress(self, *args, **kwargs):
 		self._progress_col = args[-1]
