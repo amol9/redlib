@@ -43,7 +43,7 @@ class GlobalOptions:
 
 class RequestOptions:
 
-	def __init__(self, save_filepath=None, nocache=False, open_file=None, headers=None,
+	def __init__(self, save_filepath=None, nocache=False, open_file=None, headers=None, save_to_temp_file=False,
 			progress_cb=None, progress_cp=None, content_length_cb=None, max_content_length=None):
 
 		self.save_filepath	= save_filepath
@@ -54,6 +54,7 @@ class RequestOptions:
 		self.progress_cp	= progress_cp
 		self.content_length_cb	= content_length_cb
 		self.max_content_length	= max_content_length
+		self.save_to_temp_file	= save_to_temp_file
 
 
 	def call_progress_cb(self, value):
@@ -165,26 +166,35 @@ class HttpRequest:
 
 
 	def close_outbuffer(self, out, roptions):
-		if roptions.save_filepath is None and roptions.open_file is None:
+		if roptions.save_to_temp_file or roptions.save_filepath is not None:
+			out.close()
+			return True
+
+		elif roptions.open_file is not None:
+			return True
+
+		else:
 			out.seek(0)
 			buf = out.read()
 			out.close()
 			if is_py3():
 				buf = buf.decode(encoding='utf-8')
 			return buf
-		elif roptions.save_filepath is not None:
-			out.close()
-			return True
 
 
 	def get_outbuffer(self, roptions):
-		if roptions.save_filepath is None:
-			if roptions.open_file is None:
-				out = BytesIO()
-			else:
-				out = roptions.open_file
-		else:
+		if roptions.save_to_temp_file:
+			fn, temp_image_path = tempfile.mkstemp()
+			out = os.fdopen(fn, 'r+b')
+
+		elif roptions.save_filepath is not None:
 			out = open(roptions.save_filepath, 'wb+')
+
+		elif roptions.open_file is not None:
+			out = roptions.open_file
+		
+		else:
+			out = BytesIO()
 
 		return out
 
@@ -224,14 +234,17 @@ class HttpRequest:
 				roptions.call_content_length_cb(len(data))
 				roptions.call_progress_cp('[cached]')
 
-				if roptions.save_filepath is None:
+				if roptions.save_filepath is not None:
+					with open(roptions.save_filepath, 'wb') as f:			# except
+						f.write(data)
+					return True
+				elif roptions.open_file is not None:
+					roptions.open_file.write(data)
+					return True
+				else:
 					if is_py3():
 						data = data.decode(encoding='utf-8')	
 					return data
-				else:
-					with open(save_filepath, 'wb') as f:			# except
-						f.write(data)
-					return True
 		else:
 			return False
 
