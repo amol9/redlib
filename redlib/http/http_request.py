@@ -2,11 +2,13 @@ from io import StringIO, BytesIO
 import sys
 from functools import partial
 import socket
+import tempfile
+from os import fdopen
 
 from enum import Enum
 
 from redlib.api.system import *
-from redlib.api.prnt import prints, format_size
+from redlib.api.prnt import format_size
 from .cache import Cache
 
 
@@ -20,7 +22,7 @@ else:
 __all__ = ['HttpErrorType', 'HttpError', 'GlobalOptions', 'RequestOptions', 'HttpRequest']
 
 
-HttpErrorType = Enum('HttpErrorType', ['other', 'timeout', 'size'])
+HttpErrorType = Enum('HttpErrorType', ['other', 'timeout', 'size', 'length'])
 
 
 class HttpError(Exception):
@@ -55,6 +57,8 @@ class RequestOptions:
 		self.content_length_cb	= content_length_cb
 		self.max_content_length	= max_content_length
 		self.save_to_temp_file	= save_to_temp_file
+
+		self.temp_filepath	= None
 
 
 	def call_progress_cb(self, value):
@@ -154,7 +158,11 @@ class HttpRequest:
 			else:
 				roptions.call_progress_cb(-1)
 
-			chunk = response.read(self._goptions.chunksize)
+			chunk = self.exc_call(response.read, roptions, self._goptions.chunksize)
+
+		if content_length is not None:
+			if content_read != content_length:
+				raise HttpError('response incomplete / corrupt', err_type=HttpErrorType.length)
 
 		return content_read
 
@@ -166,7 +174,11 @@ class HttpRequest:
 
 
 	def close_outbuffer(self, out, roptions):
-		if roptions.save_to_temp_file or roptions.save_filepath is not None:
+		if roptions.save_to_temp_file:
+			out.close()
+			return roptions.temp_filepath
+
+		elif roptions.save_filepath is not None:
 			out.close()
 			return True
 
@@ -184,8 +196,9 @@ class HttpRequest:
 
 	def get_outbuffer(self, roptions):
 		if roptions.save_to_temp_file:
-			fn, temp_image_path = tempfile.mkstemp()
-			out = os.fdopen(fn, 'r+b')
+			f, path = tempfile.mkstemp()
+			roptions.temp_filepath = path
+			out = fdopen(f, 'r+b')
 
 		elif roptions.save_filepath is not None:
 			out = open(roptions.save_filepath, 'wb+')
@@ -210,19 +223,27 @@ class HttpRequest:
 
 
 	def exc_call(self, func, roptions, *args, **kwargs):
+		exc = False
+
 		try:
 			r = func(*args, **kwargs)
 			return r
 
 		except (URLError, UrllibHTTPError) as e:
-			roptions.progress_cp()
-
+			exc = True
+			err_msg = str(e)
 			if type(e.reason) == socket.timeout:
 				err_type = HttpErrorType.timeout
 			else:
 				err_type = HttpErrorType.other
+		except socket.timeout as e:
+			exc = True
+			err_msg = str(e)
+			err_type = HttpErrorType.timeout
 
-			raise HttpError(str(e), code=None, err_type=err_type)
+		if exc:
+			roptions.progress_cp()
+			raise HttpError(err_msg, code=None, err_type=err_type)
 
 
 	def check_cache(self, url, request_options=None):
@@ -234,7 +255,7 @@ class HttpRequest:
 				roptions.call_content_length_cb(len(data))
 				roptions.call_progress_cp('[cached]')
 
-				if roptions.save_filepath is not None:
+				'''if roptions.save_filepath is not None:
 					with open(roptions.save_filepath, 'wb') as f:			# except
 						f.write(data)
 					return True
@@ -244,7 +265,10 @@ class HttpRequest:
 				else:
 					if is_py3():
 						data = data.decode(encoding='utf-8')	
-					return data
+					return data'''
+				out = self.get_outbuffer(roptions)
+				out.write(data)
+				return self.close_outbuffer(out, roptions)
 		else:
 			return False
 
