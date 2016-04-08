@@ -20,7 +20,7 @@ class AbsUrl():
 	regex = re.compile(	"^([a-zA-Z][a-zA-Z0-9+-\.]+)://" +		#scheme
 				"(?:(?:" +
 					"(?:(" +
-						"(?:[a-zA-Z0-9]{1,64}\.)*" +			#subdomain
+						"(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,64}\.)*" +	#subdomain
 						"(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,63})" +		#hostname
 						"(?:\.[a-zA-Z]{2,3}(?:\.[a-zA-Z]{2,3})?)" +	#tld
 					")|(" +
