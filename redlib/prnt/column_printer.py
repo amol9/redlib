@@ -4,10 +4,11 @@ from redlib.api.system import get_terminal_size
 from .func import prints, printn
 
 
-__all__ = ['ColumnPrinter']
+__all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError']
 
-# margin
+# margin, factor it in on width calc
 # CP inside CP
+# overlap
 
 class Callbacks:
 	def __init__(self):
@@ -17,14 +18,17 @@ class Callbacks:
 
 class Column:
 	
-	def __init__(self, width=1, fill=False, max=None, min=None, wrap=False, align='l', ratio=None, margin=None):
+	def __init__(self, width=1, fill=False, max=None, min=None, wrap=False, align='l', ratio=None, rmargin=1, lmargin=None, overlap=0):
 		self.width	= width
 		self.fill	= fill
 		self.max	= max
 		self.min	= min or 1
 		self.wrap	= wrap
 		self.align	= align
-		self.margin	= margin
+		self.ratio	= ratio
+		self.rmargin	= rmargin
+		self.lmargin	= lmargin
+		self.overlap	= overlap
 
 
 class ColumnPrinterError(Exception):
@@ -48,7 +52,7 @@ class ColumnPrinter:
 		tw, _ = get_terminal_size()
 		tw -= 2
 
-		if any(map(lambda c.width < 1, filter(lambda c : c.fill == False, self._cols))):
+		if any(map(lambda c : c.width < 1, filter(lambda c : c.fill == False, self._cols))):
 			raise ColumnPrinterError()
 
 		fill_cols = filter(lambda c : c.fill == True, self._cols)
@@ -61,7 +65,7 @@ class ColumnPrinter:
 		fill_width_avl = total_fill_width
 
 		for col in fill_cols:
-			if fill_width_avl < (col.ratio * total_fill_width):
+			if col.ratio is not None and fill_width_avl < (col.ratio * total_fill_width):
 				raise ColumnPrinterError()
 
 			if col.ratio is not None:
@@ -69,24 +73,21 @@ class ColumnPrinter:
 			else:
 				col.width = int(total_fill_width / len(fill_cols))
 
-			if and col.width < col.min:
+			if col.width < col.min:
 				raise ColumnPrinterError()
 			if col.max is not None and col.width > col.max:
 				col.width = col.max
 
-			fill_width_avl -= co.width
+			fill_width_avl -= col.width
 
 
 	def make_fmt_string(self):
 		fmt_string = u''
+		align_map = {'l': '<', 'r': '>', 'c': '^'}
 
 		i = 0
 		for c in self._cols:
-			align = '<'
-			if c.align == 'r':
-				align = '>'
-
-			fmt_string += u'{%d:%s%d} '%(i, align, c.width)
+			fmt_string += u'{%d:%s%d} '%(i, align_map[c.align], c.width)
 			i += 1
 
 		self._fmt_string = fmt_string
@@ -115,19 +116,21 @@ class ColumnPrinter:
 			col = self._cols[i]
 			if len(args_copy[i]) > col.width:
 				if col.wrap:		# wrap
-					wrapped = wrap(args_copy[i], self._last_col_width)
+					wrapped = wrap(args_copy[i], col.width)
 					args_copy[i] = wrapped if len(wrapped) > 0 else ['']
 					max_row = max(max_row, len(wrapped))
 				else:			# trim
-					args_copy[i] = [args_copy[i][0 : col_width]]
+					args_copy[i] = [args_copy[i][0 : col.width]]
 			else:
 				args_copy[i] = [args_copy[i]]
 
 
 		last_row = None
 		for i in range(0, max_row):
-			last_row = map(lambda a : a[i] if i < len(a) else '', args_copy))
-			prints(self._fmt_string.format(*last_row)
+			if i > 0:
+				print('')
+			last_row = map(lambda a : a[i] if i < len(a) else '', args_copy)
+			prints(self._fmt_string.format(*last_row))
 
 		if not self._row_not_cp:
 			print('')
