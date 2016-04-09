@@ -87,7 +87,7 @@ class ColumnPrinter:
 
 		i = 0
 		for c in self._cols:
-			fmt_string += u'{%d:%s%d} '%(i, align_map[c.align], c.width)
+			fmt_string += u'{%d:%s%d}'%(i, align_map[c.align], c.width)
 			i += 1
 
 		self._fmt_string = fmt_string
@@ -114,13 +114,14 @@ class ColumnPrinter:
 		max_row = 1
 		for i in range(0, len(args_copy)):
 			col = self._cols[i]
-			if len(args_copy[i]) > col.width:
+			width = col.width - ((col.rmargin or 0) + (col.lmargin or 0))
+			if len(args_copy[i]) > width:
 				if col.wrap:		# wrap
-					wrapped = wrap(args_copy[i], col.width)
+					wrapped = wrap(args_copy[i], width)
 					args_copy[i] = wrapped if len(wrapped) > 0 else ['']
 					max_row = max(max_row, len(wrapped))
 				else:			# trim
-					args_copy[i] = [args_copy[i][0 : col.width]]
+					args_copy[i] = [args_copy[i][0 : width]]
 			else:
 				args_copy[i] = [args_copy[i]]
 
@@ -129,7 +130,10 @@ class ColumnPrinter:
 		for i in range(0, max_row):
 			if i > 0:
 				print('')
-			last_row = map(lambda a : a[i] if i < len(a) else '', args_copy)
+
+			# fix for c align, or short strings
+			margin = lambda col, s : (col.lmargin or 0) * ' ' + s + (col.rmargin or 0) * ' ' 
+			last_row = map(lambda (a, c) : margin(c, a[i]) if i < len(a) else '', zip(args_copy, self._cols))
 			prints(self._fmt_string.format(*last_row))
 
 		if not self._row_not_cp:

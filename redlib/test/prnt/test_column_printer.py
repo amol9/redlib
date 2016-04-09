@@ -53,6 +53,12 @@ class TestColumnPrinter(TestCase):
 		cp.printf('left', 'right', 'center', 'left')
 
 
+	def test_margin(self):
+		cp = ColumnPrinter(cols=[Column(width=20, lmargin=3), Column(width=20, rmargin=3, wrap=True), Column(width=1, rmargin=0)])
+		s = self.gen_string(50)
+		cp.printf('margin3l', s, '$')
+
+
 	def test_ratio_2_col(self):
 		pass
 
