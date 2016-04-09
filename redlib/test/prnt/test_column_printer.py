@@ -96,6 +96,18 @@ class TestColumnPrinter(TestCase):
 			cp = ColumnPrinter(cols=[Column(width=99), Column(fill=True, ratio=0.1)])
 
 
+	def test_callbacks(self):
+		pass
+
+
+	def test_progress_column(self):
+		pass
+
+
+	def test_cp_in_cp(self):
+		pass
+
+
 	def gen_string(self, n=10):
 		c = cycle('0123456789')
 		output = ''
