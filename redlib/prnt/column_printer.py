@@ -6,7 +6,6 @@ from .func import prints, printn
 
 __all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError']
 
-# margin, factor it in on width calc
 # CP inside CP
 # overlap
 
@@ -42,39 +41,48 @@ class ColumnPrinter:
 		self._fmt_string	= None
 		self._last_col_wrap	= False
 
-		self.check_cols()
+		self.process_cols()
 		self.make_fmt_string()
 
 		self._row_not_cp	= False
 
 
-	def check_cols(self):
-		tw, _ = get_terminal_size()
-		tw -= 2
+	def get_terminal_width(self):
+		return get_terminal_size()[0] - 2
+
+
+	def process_cols(self):
+		tw = self.get_terminal_width()
 
 		if any(map(lambda c : c.width < 1, filter(lambda c : c.fill == False, self._cols))):
-			raise ColumnPrinterError()
+			raise ColumnPrinterError('column width must be at least 1')
 
 		fill_cols = filter(lambda c : c.fill == True, self._cols)
+		if sum(map(lambda c : c.ratio or (1 / len(fill_cols)), fill_cols)) > 1:
+			raise ColumnPrinterError('total of fill column ratios > 1')
 
-		total_fill_width = tw - sum(map(lambda c : (c.width or 0) if not c.fill else 0, self._cols))
+		total_fixed_width = sum(map(lambda c : (c.width or 0) if not c.fill else 0, self._cols))
+		if total_fixed_width > tw:
+			raise ColumnPrinterError('total width of fixed width columns exceeds terminal width, %d > %d'%(total_fixed_width, tw))
+
+		total_fill_width = tw - total_fixed_width
 
 		if len(fill_cols) > 0 and total_fill_width == 0:
-			raise ColumnPrinterError()
+			raise ColumnPrinterError('no space for fill columns')
 
 		fill_width_avl = total_fill_width
 
 		for col in fill_cols:
 			if col.ratio is not None and fill_width_avl < (col.ratio * total_fill_width):
-				raise ColumnPrinterError()
+				raise ColumnPrinterError('col:%d, space for fill columns exhausted'%(self._cols.index(col) + 1))
 
 			if col.ratio is not None:
-				col.width = col.ratio * total_fill_width
+				col.width = int(col.ratio * total_fill_width)
 			else:
 				col.width = int(total_fill_width / len(fill_cols))
 
 			if col.width < col.min:
-				raise ColumnPrinterError()
+				raise ColumnPrinterError('col:%d, width < minimum width, %d < %d'%(self._cols.index(col) + 1, col.width, col.min))
 			if col.max is not None and col.width > col.max:
 				col.width = col.max
 
@@ -131,8 +139,8 @@ class ColumnPrinter:
 			if i > 0:
 				print('')
 
-			# fix for c align, or short strings
-			margin = lambda col, s : (col.lmargin or 0) * ' ' + s + (col.rmargin or 0) * ' ' 
+			margin = lambda col, s : s if col.align == 'c' else (((col.lmargin or 0) * ' ' + s)  if col.align == 'l' else
+				(s + (col.rmargin or 0) * ' '))
 			last_row = map(lambda (a, c) : margin(c, a[i]) if i < len(a) else '', zip(args_copy, self._cols))
 			prints(self._fmt_string.format(*last_row))
 
