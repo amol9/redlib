@@ -1,4 +1,6 @@
 from textwrap import wrap
+from functools import partial
+import sys
 
 from redlib.api.system import get_terminal_size
 from .func import prints, printn
@@ -9,6 +11,12 @@ __all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError']
 # CP inside CP
 # overlap
 # add ProgressColumn, SepColumn (w/ condition)
+
+maxn = max
+
+def debug(msg):
+	sys.stderr.write(msg)
+
 
 class Callbacks:
 	def __init__(self):
@@ -22,7 +30,7 @@ class Column:
 		self.width	= width
 		self.fill	= fill
 		self.max	= max
-		self.min	= max(min, 1)
+		self.min	= maxn(min, 1)
 		self.wrap	= wrap
 		self.align	= align
 		self.ratio	= ratio
@@ -42,11 +50,14 @@ class ColumnPrinter:
 		self._fmt_string	= None
 		self._last_col_wrap	= False
 
+		self._row_not_cp	= False
+		self._max_width		= max_width
+
 		self.process_cols()
 		self.make_fmt_string()
 
-		self._row_not_cp	= False
-		self._max_width		= max_width
+		self.parent_cb = None
+		self.parent_cp = None
 
 
 	def get_terminal_width(self):
@@ -121,25 +132,31 @@ class ColumnPrinter:
 
 		self._row_not_cp = col_cb
 
-		max_row = 1
-		cur_row = 0
-		child_col_prntr = 0
-		cur_row_child_col_prntr = 0
+
+		class Var:
+			pass
+		var = Var()
+
+		var.cur_row = 0
+		var.max_row = 1
+		var.child_col_prntr = 0
+		var.cur_row_child_col_prntr = 0
 
 		def parent_cb(col, msg):
 			args_copy[col].append(msg)
-			cur_row_child_col_prntr += 1
-			print_rows(cur_row)
+			var.max_row = maxn(var.max_row, len(args_copy[col]))
+			var.cur_row_child_col_prntr -= 1
+			print_rows()
 
 		def parent_cp():
-			child_col_prntr -= 1
+			var.child_col_prntr -= 1
 
 		for i in range(0, len(args_copy)):
-			if type(args_copy) == ColumnPrinter:
+			if args_copy[i].__class__ == ColumnPrinter:
 				cp = args_copy[i]
-				cp.parent_cb = partial(parent_cp, i)
+				cp.parent_cb = partial(parent_cb, i)
 				cp.parent_cp = parent_cp
-				child_col_prntr += 1
+				var.child_col_prntr += 1
 				args_copy[i] = []
 			else:
 				col = self._cols[i]
@@ -148,7 +165,7 @@ class ColumnPrinter:
 					if col.wrap:		# wrap
 						wrapped = wrap(args_copy[i], width)
 						args_copy[i] = wrapped if len(wrapped) > 0 else ['']
-						max_row = max(max_row, len(wrapped))
+						var.max_row = max(var.max_row, len(wrapped))
 					else:			# trim
 						args_copy[i] = [args_copy[i][0 : width]]
 				else:
@@ -167,16 +184,19 @@ class ColumnPrinter:
 		def newline():
 			print('')
 
-		def print_rows(start_row_num):
-			for i in range(start_row_num, max_row):
+		def print_rows():
+			for i in range(var.cur_row, var.max_row):
 				prints_row(i)
-				if self._row_not_cp or cur_row_child_col_prntr > 0:
+				if self._row_not_cp or var.cur_row_child_col_prntr > 0:
+					prints('\r')
 					break
-				newline()
-				cur_row += 1
-				cur_row_child_col_prntr = child_col_prntr
+				if self.parent_cb is None:
+					newline()
+				var.cur_row += 1
+				var.cur_row_child_col_prntr = var.child_col_prntr
 
-		print_rows(0)
+		var.cur_row_child_col_prntr = var.child_col_prntr
+		print_rows()
 
 		if col_cb:
 			def col_update_cb(col, msg):

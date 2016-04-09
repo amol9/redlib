@@ -105,8 +105,17 @@ class TestColumnPrinter(TestCase):
 
 
 	def test_cp_in_cp(self):
-		pass
+		cp = ColumnPrinter(cols=[Column(width=20), Column(width=40)])
+		incp = ColumnPrinter(cols=[Column(width=20), Column(width=20)], max_width=40)
 
+		cp.printf('test', incp)
+		incp.printf('first', '1')
+		incp.printf('second', '2')
+		incp.printf('third', '3')
+		cp.printf('done')
+		incp.done()
+
+		incp.printf('extra')
 
 	def gen_string(self, n=10):
 		c = cycle('0123456789')
