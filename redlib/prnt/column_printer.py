@@ -164,6 +164,9 @@ class ColumnPrinter:
 			print_rows()
 
 		def outer_cp(col):
+			if col in var.cur_row_inner_col_prntrs:
+				var.cur_row_inner_col_prntrs.remove(col)
+
 			var.inner_col_prntrs.remove(col)
 
 		for i in range(0, len(args_copy)):
