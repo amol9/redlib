@@ -1,5 +1,6 @@
 from unittest import TestCase, main as ut_main
 from itertools import cycle
+from time import sleep
 
 from redlib.api.prnt import ColumnPrinter, Column, ColumnPrinterError
 
@@ -115,7 +116,44 @@ class TestColumnPrinter(TestCase):
 		cp.printf('done')
 		incp.done()
 
-		incp.printf('extra')
+		incp.printf('extra')		# should not print
+
+
+	def test_2_cp_in_cp(self):
+		cp = ColumnPrinter(cols=[Column(width=20), Column(width=40), Column(width=40)])
+		incp = ColumnPrinter(cols=[Column(width=20), Column(width=20)], max_width=40)
+		incp2 = ColumnPrinter(cols=[Column(width=20), Column(fill=True)], max_width=40)
+
+		self.enable_printf_sleep()
+
+		cp.printf('test', incp, incp2)
+		incp.printf('first-1', '1')
+		incp2.printf('first-2', '1')
+		incp.printf('second-1', '2')
+		incp2.printf('second-2', '2')
+		incp.printf('third-1', '3')
+		incp.printf('fourth-1', '4')
+		incp2.printf('third-2', '3')
+		incp2.done()
+
+		incp.printf('more-1', 'm')
+		incp.printf('more-1', 'm')
+		incp.printf('more-1', 'm')
+		incp.done()
+
+		cp.printf('done')
+
+
+
+	def enable_printf_sleep(self):
+		self.saved_printf = ColumnPrinter.printf
+
+		def p(*args, **kwargs):
+			sleep(0.5)
+			self.saved_printf(*args, **kwargs)
+
+		ColumnPrinter.printf = p
+
 
 	def gen_string(self, n=10):
 		c = cycle('0123456789')

@@ -10,12 +10,14 @@ __all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError']
 
 # CP inside CP
 # overlap
-# add ProgressColumn, SepColumn (w/ condition)
+# add ProgressColumn (normal, char, cont, rotate), SepColumn (w/ condition)
+# url wrap
+# column color, style, header
 
 maxn = max
 
 def debug(msg):
-	sys.stderr.write(msg)
+	sys.stderr.write(msg + '\n')
 
 
 class Callbacks:
@@ -46,18 +48,21 @@ class ColumnPrinterError(Exception):
 class ColumnPrinter:
 
 	def __init__(self, cols=[Column(fill=True, wrap=True)], max_width=None):
+		debug('-----start column printer-----')
+
 		self._cols 		= cols
 		self._fmt_string	= None
 		self._last_col_wrap	= False
 
 		self._row_not_cp	= False
+		self._newline_pending	= False
 		self._max_width		= max_width
 
 		self.process_cols()
 		self.make_fmt_string()
 
-		self.parent_cb = None
-		self.parent_cp = None
+		self.outer_cb = None
+		self.outer_cp = None
 
 
 	def get_terminal_width(self):
@@ -115,8 +120,9 @@ class ColumnPrinter:
 
 
 	def printf(self, *args, **kwargs):
-		if self._row_not_cp:
+		if self._row_not_cp or self._newline_pending:		# flush any remaining of the previous line or inner cp column data
 			self._row_not_cp = False
+			self._newline_pending = False			
 			print('')
 
 		col_count = len(self._cols)
@@ -139,24 +145,33 @@ class ColumnPrinter:
 
 		var.cur_row = 0
 		var.max_row = 1
-		var.child_col_prntr = 0
-		var.cur_row_child_col_prntr = 0
+		var.inner_cp_max_row = 1
+		var.inner_col_prntrs = []
+		var.cur_row_inner_col_prntrs = []
 
-		def parent_cb(col, msg):
+		def outer_cb(col, msg):
+			if not col in var.inner_col_prntrs:		
+				return						# inner cp has already called done()
+
 			args_copy[col].append(msg)
-			var.max_row = maxn(var.max_row, len(args_copy[col]))
-			var.cur_row_child_col_prntr -= 1
+			var.inner_cp_max_row = maxn(var.inner_cp_max_row, len(args_copy[col]))
+			debug('inner cp max row: %d'%var.inner_cp_max_row)
+			if not col in var.cur_row_inner_col_prntrs:
+				return
+
+			var.cur_row_inner_col_prntrs.remove(col)
+			debug('printing rows, col: %d, %s'%(col, msg))
 			print_rows()
 
-		def parent_cp():
-			var.child_col_prntr -= 1
+		def outer_cp(col):
+			var.inner_col_prntrs.remove(col)
 
 		for i in range(0, len(args_copy)):
 			if args_copy[i].__class__ == ColumnPrinter:
 				cp = args_copy[i]
-				cp.parent_cb = partial(parent_cb, i)
-				cp.parent_cp = parent_cp
-				var.child_col_prntr += 1
+				cp.outer_cb = partial(outer_cb, i)
+				cp.outer_cp = partial(outer_cp, i)
+				var.inner_col_prntrs.append(i)
 				args_copy[i] = []
 			else:
 				col = self._cols[i]
@@ -176,26 +191,33 @@ class ColumnPrinter:
 				(s + (col.rmargin or 0) * ' '))
 			row = map(lambda (a, c) : margin(c, a[row_num]) if row_num < len(a) else '', zip(args_copy, self._cols))
 			fmt_row = self._fmt_string.format(*row)
-			if self.parent_cb is None:
+			if self.outer_cb is None:
 				prints(fmt_row)
 			else:
-				self.parent_cb(fmt_row)
+				self.outer_cb(fmt_row)
 
 		def newline():
 			print('')
 
 		def print_rows():
-			for i in range(var.cur_row, var.max_row):
+			for i in range(var.cur_row, maxn(var.max_row, var.inner_cp_max_row)):
 				prints_row(i)
-				if self._row_not_cp or var.cur_row_child_col_prntr > 0:
+				if self._row_not_cp or len(var.cur_row_inner_col_prntrs) > 0:
 					prints('\r')
+					self._newline_pending = True
 					break
-				if self.parent_cb is None:
-					newline()
-				var.cur_row += 1
-				var.cur_row_child_col_prntr = var.child_col_prntr
 
-		var.cur_row_child_col_prntr = var.child_col_prntr
+				if self.outer_cb is None:
+					newline()
+					self._newline_pending = False
+
+				var.cur_row += 1
+				wait_for_inner_cps()
+
+		def wait_for_inner_cps():			# will not go to new line unless all inner cps call back
+			var.cur_row_inner_col_prntrs = list(var.inner_col_prntrs)
+
+		wait_for_inner_cps()
 		print_rows()
 
 		if col_cb:
@@ -218,6 +240,6 @@ class ColumnPrinter:
 
 
 	def done(self):
-		if self.parent_cp is not None:
-			self.parent_cp()
+		if self.outer_cp is not None:
+			self.outer_cp()
 
