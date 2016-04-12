@@ -8,22 +8,24 @@ from .func import prints, printn
 
 __all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError']
 
-# CP inside CP
 # overlap
 # add ProgressColumn (normal, char, cont, rotate), SepColumn (w/ condition)
 # url wrap
 # column color, style, header
 
 maxn = max
+debug_msgs = False
 
 def debug(msg):
-	sys.stderr.write(msg + '\n')
+	if debug_msgs:
+		sys.stderr.write(msg + '\n')
 
 
 class Callbacks:
+
 	def __init__(self):
-		self.col_cb		= None
-		self.col_cp		= None
+		self.col_updt_cb		= None		# column update callback
+		self.col_updt_cp		= None		# column update complete callback
 
 
 class Column:
@@ -45,24 +47,28 @@ class ColumnPrinterError(Exception):
 	pass
 
 
+class Var:	# empty class used to hold variables so that they are accessible in callbacks from printf
+	pass
+
+
 class ColumnPrinter:
 
 	def __init__(self, cols=[Column(fill=True, wrap=True)], max_width=None):
-		debug('-----start column printer-----')
-
 		self._cols 		= cols
 		self._fmt_string	= None
 		self._last_col_wrap	= False
 
-		self._row_not_cp	= False
-		self._newline_pending	= False
-		self._max_width		= max_width
+		self._col_updt_in_progress	= False
+		self._newline_pending		= False
+		self._max_width			= max_width
 
 		self.process_cols()
 		self.make_fmt_string()
 
 		self.outer_cb = None
 		self.outer_cp = None
+		
+		self._line_num = 0
 
 
 	def get_terminal_width(self):
@@ -119,37 +125,31 @@ class ColumnPrinter:
 		self._fmt_string = fmt_string
 
 
-	def printf(self, *args, **kwargs):
-		if self._row_not_cp or self._newline_pending:		# flush any remaining of the previous line or inner cp column data
-			self._row_not_cp = False
-			self._newline_pending = False			
+	def printf(self, *args, **kwargs):	
+		def newline():
+			self._line_num += 1
 			print('')
 
-		col_count = len(self._cols)
-		col_cb = kwargs.get('col_cb', False)
-		ret_cb = Callbacks()
+		if self._col_updt_in_progress or self._newline_pending:		# flush any remaining of the previous line or inner cp column data
+			self._col_updt_in_progress = False
+			self._newline_pending = False			
+			newline()
 
-		if len(args) < col_count:
-			args_copy = list(args) + ([''] * (col_count - len(args)))
-		elif len(args) > col_count:
-			args_copy = list(args[0 : col_count])
-		else:
-			args_copy = list(args)
+		col_updt = kwargs.get('col_updt', False)
+		self._col_updt_in_progress = col_updt
 
-		self._row_not_cp = col_cb
+		args_copy = self.copy_args(*args)	
 
-
-		class Var:
-			pass
 		var = Var()
 
-		var.cur_row = 0
-		var.max_row = 1
-		var.inner_cp_max_row = 1
-		var.inner_col_prntrs = []
-		var.cur_row_inner_col_prntrs = []
+		var.line_num = self._line_num
+		var.cur_row = 0					# current line number for this printf call
+		var.max_row = 1					# max line number (except any inner column printers)
+		var.inner_cp_max_row = 1			# max line number (for any inner column printers) 
+		var.inner_col_prntrs = []			# inner column printers
+		var.cur_row_inner_col_prntrs = []		# inner column printers for which callback is pending for the current line
 
-		def outer_cb(col, msg):
+		def outer_cb(col, msg):		# callback: inner CP makes to update its containing column
 			if not col in var.inner_col_prntrs:		
 				return						# inner cp has already called done()
 
@@ -163,19 +163,19 @@ class ColumnPrinter:
 			debug('printing rows, col: %d, %s'%(col, msg))
 			print_rows()
 
-		def outer_cp(col):
+		def outer_cp(col):		# callback: inner CP makes to signal end of updates
 			if col in var.cur_row_inner_col_prntrs:
 				var.cur_row_inner_col_prntrs.remove(col)
 
 			var.inner_col_prntrs.remove(col)
 
-		for i in range(0, len(args_copy)):
+		for i in range(0, len(args_copy)):	
 			if args_copy[i].__class__ == ColumnPrinter:
 				cp = args_copy[i]
 				cp.outer_cb = partial(outer_cb, i)
 				cp.outer_cp = partial(outer_cp, i)
 				var.inner_col_prntrs.append(i)
-				args_copy[i] = []
+				args_copy[i] = []		# initially nothing, a line is appended by every callback
 			else:
 				col = self._cols[i]
 				width = col.width - ((col.rmargin or 0) + (col.lmargin or 0))
@@ -189,23 +189,22 @@ class ColumnPrinter:
 				else:
 					args_copy[i] = [args_copy[i]]
 
-		def prints_row(row_num):
+		def prints_row(row_num):	# print a single line (row) of output
 			margin = lambda col, s : s if col.align == 'c' else (((col.lmargin or 0) * ' ' + s)  if col.align == 'l' else
 				(s + (col.rmargin or 0) * ' '))
 			row = map(lambda (a, c) : margin(c, a[row_num]) if row_num < len(a) else '', zip(args_copy, self._cols))
-			fmt_row = self._fmt_string.format(*row)
+			out = self._fmt_string.format(*row)
+
 			if self.outer_cb is None:
-				prints(fmt_row)
+				prints(out)
 			else:
-				self.outer_cb(fmt_row)
+				self.outer_cb(out)
 
-		def newline():
-			print('')
-
-		def print_rows():
+		def print_rows():		# print lines for current args
 			for i in range(var.cur_row, maxn(var.max_row, var.inner_cp_max_row)):
 				prints_row(i)
-				if self._row_not_cp or len(var.cur_row_inner_col_prntrs) > 0:
+
+				if self._col_updt_in_progress or len(var.cur_row_inner_col_prntrs) > 0:
 					prints('\r')
 					self._newline_pending = True
 					break
@@ -223,23 +222,44 @@ class ColumnPrinter:
 		wait_for_inner_cps()
 		print_rows()
 
-		if col_cb:
-			def col_update_cb(col, msg):
-				if len(msg) > self._cols[col].width:
-					msg = msg[0 : self._cols[col].width]
-				last_row[col] = msg
+		if col_updt:
+			cb = Callbacks()
 
-				prints('\r')
-				prints(self._fmt_string.format(*last_row))
+			def col_update_cb(col_num, msg):
+				if var.line_num != self._line_num:
+					return			# printing has moved on to next line(s)
+
+				col = self._cols[col_num]
+				width = col.width - ((col.rmargin or 0) + (col.lmargin or 0))
+				if len(msg) > width:
+					msg = msg[0 : width]
+				args_copy[col_num] = [msg]
+				print_rows()
 
 			def col_update_cp():
-				print('')
-				self._row_not_cp = False
-				
-			ret_cb.col_cb = col_update_cb
-			ret_cb.col_cp = col_update_cp
+				if var.line_num != self._line_num:
+					return
 
-		return ret_cb
+				self._col_updt_in_progress = False
+				print_rows()
+				
+			cb.col_updt_cb = col_update_cb
+			cb.col_updt_cp = col_update_cp
+
+			return cb	# return callbacks only if column update was requested
+
+
+	def copy_args(self, *args):
+		col_count = len(self._cols)
+
+		if len(args) < col_count:
+			args_copy = list(args) + ([''] * (col_count - len(args)))
+		elif len(args) > col_count:
+			args_copy = list(args[0 : col_count])
+		else:
+			args_copy = list(args)
+
+		return args_copy
 
 
 	def done(self):

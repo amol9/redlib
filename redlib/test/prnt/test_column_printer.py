@@ -124,8 +124,6 @@ class TestColumnPrinter(TestCase):
 		incp = ColumnPrinter(cols=[Column(width=20), Column(width=20)], max_width=40)
 		incp2 = ColumnPrinter(cols=[Column(width=20), Column(fill=True)], max_width=40)
 
-		self.enable_printf_sleep()
-
 		cp.printf('test', incp, incp2)
 		incp.printf('first-1', '1')
 		incp2.printf('first-2', '1')
@@ -144,6 +142,19 @@ class TestColumnPrinter(TestCase):
 		cp.printf('done')
 
 
+	def test_cb(self):
+		cp = ColumnPrinter(cols=[Column(width=20), Column(width=20)])
+
+		cb = cp.printf('test', '?', col_updt=True)
+		for i in range(0, 100):
+			cb.col_updt_cb(1, str(i))
+			sleep(0.1)
+			if i == 70:
+				cp.printf('interrupt')
+		cb.col_updt_cp()
+
+		cp.printf('done')
+	
 
 	def enable_printf_sleep(self):
 		self.saved_printf = ColumnPrinter.printf
