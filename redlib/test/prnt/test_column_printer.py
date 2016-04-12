@@ -2,7 +2,7 @@ from unittest import TestCase, main as ut_main
 from itertools import cycle
 from time import sleep
 
-from redlib.api.prnt import ColumnPrinter, Column, ColumnPrinterError
+from redlib.api.prnt import ColumnPrinter, Column, ColumnPrinterError, ProgressColumn
 
 
 class TestColumnPrinter(TestCase):
@@ -154,7 +154,33 @@ class TestColumnPrinter(TestCase):
 		cb.col_updt_cp()
 
 		cp.printf('done')
+
+
+	def test_progress(self):
+		def progress(cp, col_num, lu=False, l=101):
+			cb = cp.printf('progress', '?')
+			for i in range(0, l):
+				cb.progress_cb(col_num, i if not lu else None)
+				sleep(0.05)
+
+			cb.progress_cp(col_num)
+			cp.printf('done', progress=False)
+
+		#cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
+		#progress(cp, 1)
+
+		#cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
+		#progress(cp, 1, lu=True)
 	
+		#cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=5, char='*')])
+		#progress(cp, 1, lu=True)
+
+		#cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
+		#progress(cp, 1, l=70)
+		
+		cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=1)])
+		progress(cp, 1, lu=True)
+
 
 	def enable_printf_sleep(self):
 		self.saved_printf = ColumnPrinter.printf

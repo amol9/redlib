@@ -6,7 +6,7 @@ from redlib.api.system import get_terminal_size
 from .func import prints, printn
 
 
-__all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError']
+__all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError', 'ProgressColumn']
 
 # overlap
 # add ProgressColumn (normal, char, cont, rotate), SepColumn (w/ condition)
@@ -43,11 +43,22 @@ class Column:
 		self.overlap	= overlap
 
 
+class ProgressColumn(Column):
+
+	def __init__(self, pwidth=1, fill=False, max=None, min=None, ratio=None, rmargin=1, char='#', char_rot=False, char_set=['-', '\\', '|', '/']):
+		Column.__init__(self, width=pwidth+rmargin, fill=fill, max=max, min=min, ratio=ratio, rmargin=1)
+
+		self.pwidth 	= pwidth
+		self.char 	= char
+		self.char_rot	= char_rot or (pwidth == 1)
+		self.char_set	= char_set
+
+
 class ColumnPrinterError(Exception):
 	pass
 
 
-class Var:	# empty class used to hold variables so that they are accessible in callbacks from printf
+class Var:	# empty class used to hold variables so that they are accessible in callbacks inside printf
 	pass
 
 
@@ -136,6 +147,7 @@ class ColumnPrinter:
 			newline()
 
 		col_updt = kwargs.get('col_updt', False)
+		progress = kwargs.get('progress', True)
 		self._col_updt_in_progress = col_updt
 
 		args_copy = self.copy_args(*args)	
@@ -148,6 +160,9 @@ class ColumnPrinter:
 		var.inner_cp_max_row = 1			# max line number (for any inner column printers) 
 		var.inner_col_prntrs = []			# inner column printers
 		var.cur_row_inner_col_prntrs = []		# inner column printers for which callback is pending for the current line
+
+		progress_cols = []
+		progress_col_count = {}
 
 		def outer_cb(col, msg):		# callback: inner CP makes to update its containing column
 			if not col in var.inner_col_prntrs:		
@@ -189,6 +204,11 @@ class ColumnPrinter:
 				else:
 					args_copy[i] = [args_copy[i]]
 
+				if col.__class__ == ProgressColumn and progress:
+					progress_cols.append(i)
+					progress_col_count[i] = 0
+					self._col_updt_in_progress = True
+
 		def prints_row(row_num):	# print a single line (row) of output
 			margin = lambda col, s : s if col.align == 'c' else (((col.lmargin or 0) * ' ' + s)  if col.align == 'l' else
 				(s + (col.rmargin or 0) * ' '))
@@ -222,7 +242,7 @@ class ColumnPrinter:
 		wait_for_inner_cps()
 		print_rows()
 
-		if col_updt:
+		if col_updt or (len(progress_cols) > 0 and progress):
 			cb = Callbacks()
 
 			def col_update_cb(col_num, msg):
@@ -242,11 +262,54 @@ class ColumnPrinter:
 
 				self._col_updt_in_progress = False
 				print_rows()
-				
-			cb.col_updt_cb = col_update_cb
-			cb.col_updt_cp = col_update_cp
 
-			return cb	# return callbacks only if column update was requested
+			def progress_str(col_num, progress, cp=False):
+				col = self._cols[col_num]
+				pstr = ''
+
+				if not col.char_rot:
+					if progress is not None:
+						pstr = col.char * int((float(progress) / 100) * col.pwidth)	# progress in percentage
+						progress_col_count[col_num] = None
+					else:
+						if progress_col_count[col_num] is not None:
+							char_count = (progress_col_count[col_num] % col.pwidth + 1) if not cp else col.pwidth
+							pstr = (col.char * char_count)					# continuous progress w/o known limit
+							progress_col_count[col_num] += 1
+						else:
+							return None
+				else:
+					progress_col_count[col_num] += 1
+					pstr = col.char_set[progress_col_count[col_num] % len(col.char_set)]
+
+				return pstr
+
+			def progress_cb(col_num, progress):
+				if not col_num in progress_cols:
+					return
+
+				args_copy[col_num] = [progress_str(col_num, progress)]
+				print_rows()
+
+			def progress_cp(col_num):
+				if col_num in progress_cols:
+					progress_cols.remove(col_num)
+
+				pstr = progress_str(col_num, None, cp=True)
+				if pstr is None:
+					return
+
+				args_copy[col_num] = [pstr]
+				print_rows()
+
+			if col_updt:
+				cb.col_updt_cb = col_update_cb
+				cb.col_updt_cp = col_update_cp
+			if len(progress_cols) > 0:
+				cb.progress_cb = progress_cb
+				cb.progress_cp = progress_cp
+
+			return cb	# return callbacks only if column update was requested or progress column(s) present
 
 
 	def copy_args(self, *args):
