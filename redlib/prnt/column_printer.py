@@ -6,11 +6,9 @@ from redlib.api.system import get_terminal_size
 from .func import prints, printn
 
 
-__all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError', 'ProgressColumn']
+__all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError', 'ProgressColumn', 'SepColumn']
 
-# overlap
 # add ProgressColumn (normal, char, cont, rotate), SepColumn (w/ condition)
-# url wrap
 # column color, style, header
 
 maxn = max
@@ -52,6 +50,16 @@ class ProgressColumn(Column):
 		self.char 	= char
 		self.char_rot	= char_rot or (pwidth == 1)
 		self.char_set	= char_set
+
+
+class SepColumn(Column):
+
+	def __init__(self, char=':', rmargin=1, cond=True):
+		Column.__init__(self, width=rmargin+len(char), rmargin=rmargin)
+
+		self.char	= char
+		self.cond	= (lambda p, n : (p is not None and len(p.strip()) > 0) and (n is not None and len(n.strip()) > 0)) if cond else \
+				lambda p, n : True
 
 
 class ColumnPrinterError(Exception):
@@ -164,6 +172,8 @@ class ColumnPrinter:
 		progress_cols = []
 		progress_col_count = {}
 
+		sep_cols = []
+
 		def outer_cb(col, msg, updt=False):		# callback: inner CP makes to update its containing column
 			if not col in var.inner_col_prntrs:		
 				return						# inner cp has already called done()
@@ -215,16 +225,27 @@ class ColumnPrinter:
 					progress_col_count[i] = 0
 					self._col_updt_in_progress = True
 
+				if col.__class__ == SepColumn:
+					sep_cols.append(i)
+
 		def prints_row(row_num):	# print a single line (row) of output
 			margin = lambda col, s : s if col.align == 'c' else (((col.lmargin or 0) * ' ' + s)  if col.align == 'l' else
 				(s + (col.rmargin or 0) * ' '))
-			row = map(lambda (a, c) : margin(c, a[row_num]) if row_num < len(a) else '', zip(args_copy, self._cols))
-			out = self._fmt_string.format(*row)
+
+			row_arg = lambda i : args_copy[i][row_num] if row_num < len(args_copy[i]) else None
+			prev_col = lambda i : i and row_arg(i-1)
+			next_col = lambda i : i+1 < len(self._cols) and row_arg(i+1)
+
+			sep = lambda i, col: col.char if col.cond(prev_col(i), next_col(i)) else ''
+
+			row = map(lambda (i, c) : margin(c, (row_arg(i) or '') if i not in sep_cols else sep(i, c)), enumerate(self._cols))
+
+			output = self._fmt_string.format(*row)
 
 			if self.outer_cb is None:
-				prints(out)
+				prints(output)
 			else:
-				self.outer_cb(out, updt=self._col_updt_in_progress)
+				self.outer_cb(output, updt=self._col_updt_in_progress)
 
 		def print_rows():		# print lines for current args
 			for i in range(var.cur_row, maxn(var.max_row, var.inner_cp_max_row)):
@@ -326,12 +347,17 @@ class ColumnPrinter:
 	def copy_args(self, *args):
 		col_count = len(self._cols)
 
-		if len(args) < col_count:
-			args_copy = list(args) + ([''] * (col_count - len(args)))
-		elif len(args) > col_count:
-			args_copy = list(args[0 : col_count])
+		args_copy = list(args)
+
+		sep_cols = filter(lambda i : self._cols[i].__class__ == SepColumn, range(0, len(self._cols)))
+		map(lambda i : args_copy.insert(i, ''), sep_cols)
+
+		if len(args_copy) < col_count:
+			args_copy.extend([''] * (col_count - len(args_copy)))
+		elif len(args_copy) > col_count:
+			del args_copy[col_count : ]
 		else:
-			args_copy = list(args)
+			pass
 
 		return args_copy
 

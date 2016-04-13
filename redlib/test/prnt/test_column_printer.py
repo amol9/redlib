@@ -2,7 +2,7 @@ from unittest import TestCase, main as ut_main
 from itertools import cycle
 from time import sleep
 
-from redlib.api.prnt import ColumnPrinter, Column, ColumnPrinterError, ProgressColumn
+from redlib.api.prnt import ColumnPrinter, Column, ColumnPrinterError, ProgressColumn, SepColumn
 
 
 class TestColumnPrinter(TestCase):
@@ -196,6 +196,19 @@ class TestColumnPrinter(TestCase):
 		cb.progress_cp(1)
 		incp.done()
 		cp.printf('done')
+
+
+	def test_sep_column(self):
+		cp = ColumnPrinter(cols=[Column(width=10, wrap=True), SepColumn(), Column(width=10, wrap=True)])
+
+		cp.printf('one', '1')
+		cp.printf('two')
+		cp.printf('three', '3')
+		cp.printf('wrap text', 'test ' * 4)
+		cp.printf('wrap this column', 'text')
+		cp.printf('wrap both columns', 'text ' * 3)		# need to fix
+		cp.printf()
+		cp.printf('done', '', 'extra')
 
 
 	def enable_printf_sleep(self):
