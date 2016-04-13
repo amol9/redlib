@@ -45,8 +45,8 @@ class Column:
 
 class ProgressColumn(Column):
 
-	def __init__(self, pwidth=1, fill=False, max=None, min=None, ratio=None, rmargin=1, char='#', char_rot=False, char_set=['-', '\\', '|', '/']):
-		Column.__init__(self, width=pwidth+rmargin, fill=fill, max=max, min=min, ratio=ratio, rmargin=1)
+	def __init__(self, pwidth=1, rmargin=1, char='#', char_rot=False, char_set=['-', '\\', '|', '/']):
+		Column.__init__(self, width=pwidth+rmargin, rmargin=1)
 
 		self.pwidth 	= pwidth
 		self.char 	= char
@@ -64,14 +64,14 @@ class Var:	# empty class used to hold variables so that they are accessible in c
 
 class ColumnPrinter:
 
-	def __init__(self, cols=[Column(fill=True, wrap=True)], max_width=None):
+	def __init__(self, cols=[Column(fill=True, wrap=True)], row_width=None):
 		self._cols 		= cols
 		self._fmt_string	= None
 		self._last_col_wrap	= False
 
 		self._col_updt_in_progress	= False
 		self._newline_pending		= False
-		self._max_width			= max_width
+		self._row_width			= row_width
 
 		self.process_cols()
 		self.make_fmt_string()
@@ -82,12 +82,12 @@ class ColumnPrinter:
 		self._line_num = 0
 
 
-	def get_terminal_width(self):
-		return self._max_width or (get_terminal_size()[0] - 2)
+	def get_row_width(self):
+		return self._row_width or (get_terminal_size()[0] - 2)
 
 
 	def process_cols(self):
-		tw = self.get_terminal_width()
+		tw = self.get_row_width()
 
 		if any(map(lambda c : c.width < 1, filter(lambda c : c.fill == False, self._cols))):
 			raise ColumnPrinterError('column width must be at least 1')
@@ -164,35 +164,41 @@ class ColumnPrinter:
 		progress_cols = []
 		progress_col_count = {}
 
-		def outer_cb(col, msg):		# callback: inner CP makes to update its containing column
+		def outer_cb(col, msg, updt=False):		# callback: inner CP makes to update its containing column
 			if not col in var.inner_col_prntrs:		
 				return						# inner cp has already called done()
 
-			args_copy[col].append(msg)
+			if not updt:
+				args_copy[col].append(msg)
+			else:
+				args_copy[col] = [msg]
+
 			var.inner_cp_max_row = maxn(var.inner_cp_max_row, len(args_copy[col]))
-			debug('inner cp max row: %d'%var.inner_cp_max_row)
 			if not col in var.cur_row_inner_col_prntrs:
 				return
 
-			var.cur_row_inner_col_prntrs.remove(col)
-			debug('printing rows, col: %d, %s'%(col, msg))
+			if not updt:
+				var.cur_row_inner_col_prntrs.remove(col)
 			print_rows()
 
-		def outer_cp(col):		# callback: inner CP makes to signal end of updates
+		def outer_cp(col):			# callback: inner CP makes to signal end of updates
 			if col in var.cur_row_inner_col_prntrs:
 				var.cur_row_inner_col_prntrs.remove(col)
 
 			var.inner_col_prntrs.remove(col)
 
 		for i in range(0, len(args_copy)):	
+			col = self._cols[i]
 			if args_copy[i].__class__ == ColumnPrinter:
 				cp = args_copy[i]
+				if cp.get_row_width() > col.width:
+					raise ColumnPrinterError('inner row width greater than containing column width')
+
 				cp.outer_cb = partial(outer_cb, i)
 				cp.outer_cp = partial(outer_cp, i)
 				var.inner_col_prntrs.append(i)
 				args_copy[i] = []		# initially nothing, a line is appended by every callback
 			else:
-				col = self._cols[i]
 				width = col.width - ((col.rmargin or 0) + (col.lmargin or 0))
 				if len(args_copy[i]) > width:
 					if col.wrap:		# wrap
@@ -218,13 +224,13 @@ class ColumnPrinter:
 			if self.outer_cb is None:
 				prints(out)
 			else:
-				self.outer_cb(out)
+				self.outer_cb(out, updt=self._col_updt_in_progress)
 
 		def print_rows():		# print lines for current args
 			for i in range(var.cur_row, maxn(var.max_row, var.inner_cp_max_row)):
 				prints_row(i)
 
-				if self._col_updt_in_progress or len(var.cur_row_inner_col_prntrs) > 0:
+				if self._col_updt_in_progress or len(var.cur_row_inner_col_prntrs) > 0 or inner_col_updt_in_progress():
 					prints('\r')
 					self._newline_pending = True
 					break
@@ -238,6 +244,9 @@ class ColumnPrinter:
 
 		def wait_for_inner_cps():			# will not go to new line unless all inner cps call back
 			var.cur_row_inner_col_prntrs = list(var.inner_col_prntrs)
+
+		def inner_col_updt_in_progress():
+			return any(filter(lambda c : c.is_col_updt_in_progress(), map(lambda i : args[i], var.inner_col_prntrs)))
 
 		wait_for_inner_cps()
 		print_rows()
@@ -300,6 +309,8 @@ class ColumnPrinter:
 					return
 
 				args_copy[col_num] = [pstr]
+				self._col_updt_in_progress = False
+				self.done()
 				print_rows()
 
 			if col_updt:
@@ -328,4 +339,8 @@ class ColumnPrinter:
 	def done(self):
 		if self.outer_cp is not None:
 			self.outer_cp()
+
+
+	def is_col_updt_in_progress(self):
+		self._col_updt_in_progress
 

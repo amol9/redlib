@@ -107,7 +107,7 @@ class TestColumnPrinter(TestCase):
 
 	def test_cp_in_cp(self):
 		cp = ColumnPrinter(cols=[Column(width=20), Column(width=40)])
-		incp = ColumnPrinter(cols=[Column(width=20), Column(width=20)], max_width=40)
+		incp = ColumnPrinter(cols=[Column(width=20), Column(width=20)], row_width=40)
 
 		cp.printf('test', incp)
 		incp.printf('first', '1')
@@ -121,8 +121,8 @@ class TestColumnPrinter(TestCase):
 
 	def test_2_cp_in_cp(self):
 		cp = ColumnPrinter(cols=[Column(width=20), Column(width=40), Column(width=40)])
-		incp = ColumnPrinter(cols=[Column(width=20), Column(width=20)], max_width=40)
-		incp2 = ColumnPrinter(cols=[Column(width=20), Column(fill=True)], max_width=40)
+		incp = ColumnPrinter(cols=[Column(width=20), Column(width=20)], row_width=40)
+		incp2 = ColumnPrinter(cols=[Column(width=20), Column(fill=True)], row_width=40)
 
 		cp.printf('test', incp, incp2)
 		incp.printf('first-1', '1')
@@ -166,20 +166,36 @@ class TestColumnPrinter(TestCase):
 			cb.progress_cp(col_num)
 			cp.printf('done', progress=False)
 
-		#cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
-		#progress(cp, 1)
+		cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
+		progress(cp, 1)
 
-		#cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
-		#progress(cp, 1, lu=True)
+		cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
+		progress(cp, 1, lu=True)
 	
-		#cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=5, char='*')])
-		#progress(cp, 1, lu=True)
+		cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=5, char='*')])
+		progress(cp, 1, lu=True)
 
-		#cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
-		#progress(cp, 1, l=70)
+		cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)])
+		progress(cp, 1, l=70)
 		
 		cp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=1)])
 		progress(cp, 1, lu=True)
+
+
+	def test_progress_in_inner_cp(self):
+		cp = ColumnPrinter(cols=[Column(width=20), Column(width=50)])
+		incp = ColumnPrinter(cols=[Column(width=20), ProgressColumn(pwidth=10)], row_width=50)
+
+		cp.printf('start')
+		cp.printf('progress', incp)
+		cb = incp.printf('downloading', '?')
+
+		for i in range(0, 101):
+			cb.progress_cb(1, i)
+			sleep(0.05)
+		cb.progress_cp(1)
+		incp.done()
+		cp.printf('done')
 
 
 	def enable_printf_sleep(self):
