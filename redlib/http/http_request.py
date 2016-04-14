@@ -4,6 +4,7 @@ from functools import partial
 import socket
 import tempfile
 from os import fdopen
+from time import time
 
 from enum import Enum
 
@@ -46,7 +47,7 @@ class GlobalOptions:
 class RequestOptions:
 
 	def __init__(self, save_filepath=None, nocache=False, open_file=None, headers=None, save_to_temp_file=False,
-			progress_cb=None, progress_cp=None, content_length_cb=None, max_content_length=None):
+			progress_cb=None, progress_cp=None, content_length_cb=None, rate_cb=None, cached_cb=None, max_content_length=None):
 
 		self.save_filepath	= save_filepath
 		self.nocache		= nocache
@@ -55,6 +56,8 @@ class RequestOptions:
 		self.progress_cb	= progress_cb
 		self.progress_cp	= progress_cp
 		self.content_length_cb	= content_length_cb
+		self.rate_cb		= rate_cb
+		self.cached_cb		= cached_cb
 		self.max_content_length	= max_content_length
 		self.save_to_temp_file	= save_to_temp_file
 
@@ -66,14 +69,23 @@ class RequestOptions:
 			self.progress_cb(value)
 
 
-	def call_progress_cp(self, value=None):
-		if self.progress_cp is not None:
-			self.progress_cp(value)
+	def call_progress_cp(self):
+		self.progress_cp()
 
 
 	def call_content_length_cb(self, value):
 		if self.content_length_cb is not None:
 			self.content_length_cb(value)
+
+
+	def call_rate_cb(self, value):
+		if self.rate_cb is not None:
+			self.rate_cb(value)
+
+
+	def call_cached_cb(self, value):
+		if self.cached_cb is not None:
+			self.cached_cb(value)
 
 
 class HttpRequest:
@@ -115,10 +127,10 @@ class HttpRequest:
 
 		content_read = self.read_response_chunks(res, out, content_length, roptions)
 		
-		if content_length is None:
-			roptions.call_content_length_cb(content_read)
+		#if content_length is None:
+		#	roptions.call_content_length_cb(content_read)
 
-		roptions.call_progress_cp(-1 if content_length is None else None)
+		roptions.call_progress_cp()
 
 		res.close()
 
@@ -140,7 +152,9 @@ class HttpRequest:
 		return headers	
 
 	def read_response_chunks(self, response, out, content_length, roptions):
-		chunk = response.read(self._goptions.chunksize)
+		start_time = time()
+		chunk = self.exc_call(response.read, roptions, self._goptions.chunksize)
+
 		content_read = 0.0
 
 		while chunk:
@@ -153,10 +167,13 @@ class HttpRequest:
 				res.close()
 				raise HttpError('max content length exceeded', err_type=HttpErrorType.size)
 
+			roptions.call_rate_cb(int(content_read/(time() - start_time)))
+
 			if content_length is not None:
 				roptions.call_progress_cb((content_read / content_length) * 100)
 			else:
-				roptions.call_progress_cb(-1)
+				roptions.call_content_length_cb(content_read)
+				roptions.call_progress_cb(None)
 
 			chunk = self.exc_call(response.read, roptions, self._goptions.chunksize)
 
@@ -253,7 +270,8 @@ class HttpRequest:
 			data = self._cache.get(url)
 			if data is not None:
 				roptions.call_content_length_cb(len(data))
-				roptions.call_progress_cp('[cached]')
+				roptions.call_cached_cb('[cached]')
+				roptions.call_progress_cp()
 
 				'''if roptions.save_filepath is not None:
 					with open(roptions.save_filepath, 'wb') as f:			# except

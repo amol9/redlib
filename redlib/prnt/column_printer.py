@@ -75,7 +75,6 @@ class ColumnPrinter:
 	def __init__(self, cols=[Column(fill=True, wrap=True)], row_width=None):
 		self._cols 		= cols
 		self._fmt_string	= None
-		self._last_col_wrap	= False
 
 		self._col_updt_in_progress	= False
 		self._newline_pending		= False
@@ -166,9 +165,10 @@ class ColumnPrinter:
 		var.cur_row = 0					# current line number for this printf call
 		var.max_row = 1					# max line number (except any inner column printers)
 		var.inner_cp_max_row = 1			# max line number (for any inner column printers) 
-		var.inner_col_prntrs = []			# inner column printers
+		var.inner_col_prntrs = []			# inner column printer column numbers
 		var.cur_row_inner_col_prntrs = []		# inner column printers for which callback is pending for the current line
-
+		var.inner_col_prntr_objs = []			# inner column printer objects
+	
 		progress_cols = []
 		progress_col_count = {}
 
@@ -206,7 +206,10 @@ class ColumnPrinter:
 
 				cp.outer_cb = partial(outer_cb, i)
 				cp.outer_cp = partial(outer_cp, i)
+
 				var.inner_col_prntrs.append(i)
+				var.inner_col_prntr_objs.append(args_copy[i])
+
 				args_copy[i] = []		# initially nothing, a line is appended by every callback
 			else:
 				width = col.width - ((col.rmargin or 0) + (col.lmargin or 0))
@@ -267,7 +270,7 @@ class ColumnPrinter:
 			var.cur_row_inner_col_prntrs = list(var.inner_col_prntrs)
 
 		def inner_col_updt_in_progress():
-			return any(filter(lambda c : c.is_col_updt_in_progress(), map(lambda i : args[i], var.inner_col_prntrs)))
+			return any(filter(lambda c : c.is_col_updt_in_progress(), var.inner_col_prntr_objs))
 
 		wait_for_inner_cps()
 		print_rows()
@@ -330,9 +333,9 @@ class ColumnPrinter:
 					return
 
 				args_copy[col_num] = [pstr]
-				self._col_updt_in_progress = False
-				self.done()
+				#self.done()
 				print_rows()
+				self._col_updt_in_progress = False
 
 			if col_updt:
 				cb.col_updt_cb = col_update_cb
