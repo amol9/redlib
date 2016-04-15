@@ -10,7 +10,7 @@ from enum import Enum
 
 from redlib.api.system import *
 from redlib.api.prnt import format_size
-from .cache2 import Cache
+from .cache import Cache
 
 
 if is_py3():
@@ -271,7 +271,10 @@ class HttpRequest:
 			data = self._cache.get(url, hash=True)
 			if data is not None:
 				roptions.call_content_length_cb(len(data))
-				roptions.call_cached_cb('[cached]')
+
+				info = self._cache.info(url, hash=True)
+				roptions.call_cached_cb(info)
+
 				roptions.call_progress_cp()
 
 				out = self.get_outbuffer(roptions)

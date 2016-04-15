@@ -1,5 +1,5 @@
 from os.path import exists, join as joinpath
-from os import mkdir, makedirs, remove
+from os import mkdir, makedirs, remove, stat
 import hashlib
 from glob import glob
 from datetime import datetime, timedelta
@@ -103,9 +103,7 @@ class _Cache():
 
 
 	def get(self, name, hash=False):
-		id = name if not hash else self.md5hash(name)
-
-		cache_item = self._db.get(id, None)
+		id, cache_item = self.get_cache_item(name, hash=hash)
 		if cache_item is None:
 			return None
 
@@ -119,6 +117,24 @@ class _Cache():
 						return pickleload(f, fix_imports=True)
 					except EOFError:
 						return None
+
+
+	def get_cache_item(self, name, hash=False):
+		id = name if not hash else self.md5hash(name)
+		return id, self._db.get(id, None)
+
+
+	def info(self, name, hash=False):
+		info = {}
+		id, cache_item = self.get_cache_item(name, hash=hash)
+		if cache_item is not None:
+			path = joinpath(self._cache_dir, id)
+			if exists(path):
+				st = stat(path)
+				info['size'] = st.st_size
+				info['mtime'] = st.st_mtime
+
+		return info
 		
 
 	def clear_cache(self):
