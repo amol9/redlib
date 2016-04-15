@@ -10,7 +10,7 @@ from enum import Enum
 
 from redlib.api.system import *
 from redlib.api.prnt import format_size
-from .cache import Cache
+from .cache2 import Cache
 
 
 if is_py3():
@@ -36,18 +36,20 @@ class HttpError(Exception):
 
 class GlobalOptions:
 
-	def __init__(self, cache_dir=None, chunksize=50*1024, headers=None, timeout=120, max_content_length=1024*1024*10):
+	def __init__(self, cache_dir=None, chunksize=50*1024, headers=None, timeout=120, max_content_length=1024*1024*10, cache_timeout='1d'):
 		self.cache_dir		= cache_dir
 		self.chunksize		= chunksize
 		self.headers		= headers
 		self.timeout		= timeout
 		self.max_content_length	= max_content_length
+		self.cache_timeout	= cache_timeout
 
 
 class RequestOptions:
 
 	def __init__(self, save_filepath=None, nocache=False, open_file=None, headers=None, save_to_temp_file=False,
-			progress_cb=None, progress_cp=None, content_length_cb=None, rate_cb=None, cached_cb=None, max_content_length=None):
+			progress_cb=None, progress_cp=None, content_length_cb=None, rate_cb=None, cached_cb=None,
+			max_content_length=None, cache_timeout=None):
 
 		self.save_filepath	= save_filepath
 		self.nocache		= nocache
@@ -60,6 +62,7 @@ class RequestOptions:
 		self.cached_cb		= cached_cb
 		self.max_content_length	= max_content_length
 		self.save_to_temp_file	= save_to_temp_file
+		self.cache_timeout	= cache_timeout
 
 		self.temp_filepath	= None
 
@@ -127,9 +130,6 @@ class HttpRequest:
 
 		content_read = self.read_response_chunks(res, out, content_length, roptions)
 		
-		#if content_length is None:
-		#	roptions.call_content_length_cb(content_read)
-
 		roptions.call_progress_cp()
 
 		res.close()
@@ -187,7 +187,8 @@ class HttpRequest:
 	def cache_response(self, url, out, roptions):
 		if not roptions.nocache and self._cache is not None:
 			out.seek(0)
-			self._cache.add(url, out.read())
+			timeout = roptions.cache_timeout or self._goptions.cache_timeout
+			self._cache.add(url, out.read(), timeout, hash=True)
 
 
 	def close_outbuffer(self, out, roptions):
@@ -267,23 +268,12 @@ class HttpRequest:
 		roptions = RequestOptions() if request_options is None else request_options
 
 		if not roptions.nocache and self._cache is not None:
-			data = self._cache.get(url)
+			data = self._cache.get(url, hash=True)
 			if data is not None:
 				roptions.call_content_length_cb(len(data))
 				roptions.call_cached_cb('[cached]')
 				roptions.call_progress_cp()
 
-				'''if roptions.save_filepath is not None:
-					with open(roptions.save_filepath, 'wb') as f:			# except
-						f.write(data)
-					return True
-				elif roptions.open_file is not None:
-					roptions.open_file.write(data)
-					return True
-				else:
-					if is_py3():
-						data = data.decode(encoding='utf-8')	
-					return data'''
 				out = self.get_outbuffer(roptions)
 				out.write(data)
 				return self.close_outbuffer(out, roptions)

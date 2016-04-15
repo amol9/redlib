@@ -3,57 +3,130 @@ from os import mkdir, makedirs, remove
 import hashlib
 from glob import glob
 from datetime import datetime, timedelta
+from time import time
 
 from ..misc.singleton import Singleton
+from redlib.api.py23 import pickledump, pickleload
+from redlib.api.misc import str_time_period_to_seconds
+
+
+__all__ = ['Cache', 'CacheError']
 
 
 class CacheError(Exception):
 	pass
 
 
+class CacheItem:
+	def __init__(self, timeout, pickle=False):
+		self.timeout = timeout
+		self.pickle = pickle
+
+
 class _Cache():
+	db_filename 	= 'db'
+	db_version 	= '1.0'
+	pickle_protocol = 2
+
 	def __init__(self, cache_dir):
 		self._cache_dir = cache_dir
-		self.check()
+		self._db_filepath = joinpath(self._cache_dir, self.db_filename)
+
+		self._db = {}
+		self.init()
 
 
-	def check(self):
+	def init(self):
 		if not exists(self._cache_dir):
 			makedirs(self._cache_dir)
-			open(joinpath(self._cache_dir, (datetime.today() + timedelta(days=1)).strftime('expiry%d%b%Y')), 'w').close()
-		else:
-			expiry_file = glob(joinpath(self._cache_dir, 'expiry*'))
-			expiry = datetime.strptime(expiry_file[0][-9:], '%d%b%Y') if len(expiry_file) > 0 else datetime(1970, 1, 1)
-			today = datetime.today()
-			if expiry <= today:
-				self.clear_cache()
+
+		if exists(self._db_filepath):
+			self.load_db()
+			self.clear_expired_items()
+
+
+	def load_db(self):
+		with open(self._db_filepath, 'rb') as f:
+			self._db = pickleload(f, fix_imports=True)[1]
+
+
+	def clear_expired_items(self):
+		for id, cache_item in self._db.items():
+			if cache_item.timeout is not None and cache_item.timeout <= int(time()):
+				self.delete(id)
+				self._db.pop(id)
+		self.save_db()
+		
+
+	def delete(self, id):
+		filepath = joinpath(self._cache_dir, id)
+		try:
+			remove(filepath)
+		except OSError as e:
+			pass
+
+
+	def save_db(self):
+		with open(self._db_filepath, 'wb') as f:
+			pickledump([self.db_version, self._db], f)
 			
 
-	def add(self, url, data):
+	def add(self, name, data, timeout, pickle=False, hash=False):
+		id = name if not hash else self.md5hash(name)
+
+		with open(joinpath(self._cache_dir, id), 'wb') as f:
+			if not pickle:
+				f.write(data)
+			else:
+				pickledump(data, f, protocol=self.pickle_protocol, fix_imports=True)
+
+		self._db[id] = CacheItem(self.calc_timeout(timeout), pickle=pickle)
+		self.save_db()
+
+
+	def calc_timeout(self, timeout_str):
+		if timeout_str == 'never':
+			return None
+
+		try:
+			seconds = str_time_period_to_seconds(timeout_str)
+		except TimePeriodError as e:
+			raise Cache2Error()
+
+		return int(time()) + seconds
+
+
+	def md5hash(self, input):
 		md5h = hashlib.md5()
-		md5h.update(url.encode('utf-8'))
-		
-		with open(joinpath(self._cache_dir, md5h.hexdigest()), 'wb') as f:
-			f.write(data)
+		md5h.update(input.encode('utf-8'))
+		return md5h.hexdigest()
 
 
-	def get(self, url):
-		md5h = hashlib.md5()
-		md5h.update(url.encode('utf-8'))
+	def get(self, name, hash=False):
+		id = name if not hash else self.md5hash(name)
 
-		data = None
-		path = joinpath(self._cache_dir, md5h.hexdigest())
+		cache_item = self._db.get(id, None)
+		if cache_item is None:
+			return None
+
+		path = joinpath(self._cache_dir, id)
 		if exists(path):
 			with open(path, 'rb') as f:
-				data = f.read()
-
-		return data
+				if not cache_item.pickle:
+					return f.read()
+				else:
+					try:
+						return pickleload(f, fix_imports=True)
+					except EOFError:
+						return None
 		
 
 	def clear_cache(self):
 		for filepath in glob(joinpath(self._cache_dir, '*')):
 			remove(filepath)
 		open(joinpath(self._cache_dir, (datetime.today() + timedelta(days=1)).strftime('expiry%d%b%Y')), 'w').close()
+
+		self._db = {}
 
 
 class Cache(Singleton):
