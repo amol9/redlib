@@ -10,7 +10,7 @@ from enum import Enum
 
 from redlib.api.system import *
 from redlib.api.prnt import format_size
-from .cache import Cache
+from .cache import Cache, CacheError
 
 
 if is_py3():

@@ -19,8 +19,9 @@ class CacheError(Exception):
 
 class CacheItem:
 	def __init__(self, timeout, pickle=False):
-		self.timeout = timeout
-		self.pickle = pickle
+		self.timeout 		= timeout
+		self.pickle 		= pickle
+		self.create_time 	= int(time())
 
 
 class _Cache():
@@ -131,8 +132,10 @@ class _Cache():
 			path = joinpath(self._cache_dir, id)
 			if exists(path):
 				st = stat(path)
-				info['size'] = st.st_size
-				info['mtime'] = st.st_mtime
+
+				info['size'] 	= st.st_size
+				info['mtime'] 	= st.st_mtime
+				info['crtime'] 	= cache_item.create_time
 
 		return info
 		
