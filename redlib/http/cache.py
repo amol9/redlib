@@ -59,7 +59,8 @@ class _Cache():
 		self.save_db()
 		
 
-	def delete(self, id):
+	def delete(self, name, hash=False):
+		id = name if not hash else self.md5hash(name)
 		filepath = joinpath(self._cache_dir, id)
 		try:
 			remove(filepath)
