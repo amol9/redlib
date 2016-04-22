@@ -196,6 +196,7 @@ class ColumnPrinter:
 				var.cur_row_inner_col_prntrs.remove(col)
 
 			var.inner_col_prntrs.remove(col)
+			print_rows()
 
 		for i in range(0, len(args_copy)):	
 			col = self._cols[i]
