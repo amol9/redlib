@@ -216,15 +216,16 @@ class ColumnPrinter:
 				args_copy[i] = []		# initially nothing, a line is appended by every callback
 			else:
 				width = col.width - ((col.rmargin or 0) + (col.lmargin or 0))
-				if len(args_copy[i]) > width:
+				lines = args_copy[i].splitlines()
+				args_copy[i] = []
+				for line in lines:
 					if col.wrap:		# wrap
-						wrapped = wrap(args_copy[i], width)
-						args_copy[i] = wrapped if len(wrapped) > 0 else ['']
-						var.max_row = max(var.max_row, len(wrapped))
+						wrapped = wrap(line, width)
+						args_copy[i].extend(wrapped if len(wrapped) > 0 else [''])
+						var.max_row = max(var.max_row, len(args_copy[i]))
 					else:			# trim
-						args_copy[i] = [args_copy[i][0 : width]]
-				else:
-					args_copy[i] = [args_copy[i]]
+						args_copy[i] = [line[0 : width]]
+						break
 
 				if col.__class__ == ProgressColumn and progress:
 					progress_cols.append(i)
