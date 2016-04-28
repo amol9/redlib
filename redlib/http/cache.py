@@ -73,7 +73,7 @@ class _Cache():
 			pickledump([self.db_version, self._db], f)
 			
 
-	def add(self, name, data, timeout, pickle=False, hash=False):
+	def add(self, name, data, timeout, pickle=False, hash=False, updt_timeout=True):
 		id = name if not hash else self.md5hash(name)
 
 		with open(joinpath(self._cache_dir, id), 'wb') as f:
@@ -82,7 +82,11 @@ class _Cache():
 			else:
 				pickledump(data, f, protocol=self.pickle_protocol, fix_imports=True)
 
-		self._db[id] = CacheItem(self.calc_timeout(timeout), pickle=pickle)
+		if not updt_timeout and self._db.get(id, None) is not None:
+			pass
+		else:
+			self._db[id] = CacheItem(self.calc_timeout(timeout), pickle=pickle)
+
 		self.save_db()
 
 

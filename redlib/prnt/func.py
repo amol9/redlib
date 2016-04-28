@@ -4,11 +4,11 @@ import sys
 
 from ..colors.colortrans import rgb2short
 from ..colors.clist import colorlist
-from ..system.common import is_linux
+from ..system.common import is_linux, is_py3
 from ..system.terminalsize import get_terminal_size
 
 
-__all__ = ['printc', 'prints', 'print_colorlist', 'format_size']
+__all__ = ['printc', 'prints', 'print_colorlist', 'format_size', 'terminal_utf8', 'filter_unicode_chars']
 
 
 def printc(msg, color=None):
@@ -72,6 +72,18 @@ def format_size(num, suffix='b'):
 			num /= 1024.0
 
 		return "%.1f%s%s" % (num, 'Y', suffix)
+
+
+def terminal_utf8():
+	return sys.stdout.encoding == 'UTF-8'
+
+
+def filter_unicode_chars(s):
+	if is_py3():
+		s2 = bytes(s, 'utf-8') if type(s) == str else s
+		return s2.decode('ascii', 'ignore')
+	else:
+		return s.decode('unicode_escape').encode('ascii', 'ignore')
 
 
 # docs:

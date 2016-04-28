@@ -6,7 +6,7 @@ from redlib.api.system import get_terminal_size
 from .func import prints, printn
 
 
-__all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError', 'ProgressColumn', 'SepColumn']
+__all__ = ['ColumnPrinter', 'Column', 'ColumnPrinterError', 'ProgressColumn', 'SepColumn', 'Callbacks']
 
 # add ProgressColumn (normal, char, cont, rotate), SepColumn (w/ condition)
 # column color, style, header
@@ -24,6 +24,8 @@ class Callbacks:
 	def __init__(self):
 		self.col_updt_cb		= None		# column update callback
 		self.col_updt_cp		= None		# column update complete callback
+		self.progress_cb		= None		# progress callback
+		self.progress_cp		= None		# progress complete callback
 
 
 class Column:
