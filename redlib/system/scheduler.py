@@ -90,7 +90,7 @@ class LinuxScheduler(Scheduler):
 		cmd = cmd_full_path + ' ' + ' '.join(cmd_parts[1:])
 		sh_cmd = '(crontab -l ; echo \"%s\" %s \\#%s) | crontab'%(cronstr, cmd, taskname + '\n')
 
-		rc, _ = sys_command(sh_cmd, supress_output=True)
+		rc, _ = sys_command(sh_cmd, suppress_output=True)
 		if rc == 0:
 			return True
 		return False
@@ -98,7 +98,7 @@ class LinuxScheduler(Scheduler):
 
 	def delete(self, taskname):
 		sh_cmd = 'crontab -l | grep -v %s$ | crontab'%taskname
-		rc, _ = sys_command(sh_cmd, supress_output=True)
+		rc, _ = sys_command(sh_cmd, suppress_output=True)
 		if rc == 0:
 			return True
 		return False
@@ -106,7 +106,7 @@ class LinuxScheduler(Scheduler):
 	
 	def exists(self, taskname):
 		sh_cmd = 'crontab -l | grep %s$'%taskname
-		rc, _ = sys_command(sh_cmd, supress_output=True)
+		rc, _ = sys_command(sh_cmd, suppress_output=True)
 		if rc == 0:
 			return True
 		return False
@@ -127,7 +127,7 @@ class WindowsScheduler(Scheduler):
 		num, period = self.parse(freq)
 		schtasks_cmd = 'schtasks /create /tn %s /tr \"%s\" /sc %s /mo %d'%\
 				(taskname, cmd, self.period_map[period], num)
-		rc, _ = sys_command(schtasks_cmd, supress_output=True)
+		rc, _ = sys_command(schtasks_cmd, suppress_output=True)
 		if rc == 0:
 			return True
 		return False
@@ -136,7 +136,7 @@ class WindowsScheduler(Scheduler):
 	def delete(self, taskname):
 		out = None	
 		schtasks_cmd = 'schtasks /delete /tn %s /f'%taskname
-		rc, _ = sys_command(schtasks_cmd, supress_output=True)
+		rc, _ = sys_command(schtasks_cmd, suppress_output=True)
 		if rc == 0:
 			return True
 		return False
@@ -145,7 +145,7 @@ class WindowsScheduler(Scheduler):
 	def exists(self, taskname):
 		out = None
 		query_cmd = 'schtasks /query /tn %s'%taskname
-		rc, _ = sys_command(query_cmd, supress_output=True)
+		rc, _ = sys_command(query_cmd, suppress_output=True)
 		if rc == 0:
 			return True
 		return False

@@ -95,6 +95,10 @@ class ColumnPrinter:
 		return self._row_width or (get_terminal_size()[0] - 2)
 
 
+	def isatty(self):
+		return sys.stdout.isatty()
+
+
 	def process_cols(self):
 		tw = self.get_row_width()
 
@@ -146,6 +150,9 @@ class ColumnPrinter:
 
 
 	def printf(self, *args, **kwargs):	
+		if not self.isatty():
+			return
+
 		def newline():
 			self._line_num += 1
 			print('')
