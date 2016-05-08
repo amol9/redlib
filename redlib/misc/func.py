@@ -5,7 +5,7 @@ import hashlib
 from ..system.common import is_py2
 
 
-__all__ = ['ob', 'str_time_period_to_seconds', 'md5hash']
+__all__ = ['ob', 'str_time_period_to_seconds', 'md5hash', 'cmp_version']
 
 
 def ob(input, key=b'48bldg03yghsl;741dfbml<?x8jgbv3805'):
@@ -61,3 +61,21 @@ def md5hash(input):
 	md5h.update(input)
 	return md5h.hexdigest()
 
+
+def cmp_version(v1, v2):
+	parts1 = v1.split('.')
+	parts2 = v2.split('.')
+
+	for p1, p2 in zip(parts1, parts2):
+		c = None
+		try:
+			i1 = int(p1)
+			i2 = int(p2)
+			c = cmp(i1, i2)
+		except ValueError:
+			c = cmp(p1, p2)
+
+		if c != 0:
+			return c
+
+	return 0
