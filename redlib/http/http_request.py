@@ -167,7 +167,7 @@ class HttpRequest:
 				res.close()
 				raise HttpError('max content length exceeded', err_type=HttpErrorType.size)
 
-			roptions.call_rate_cb(int(content_read/(time() - start_time)))
+			roptions.call_rate_cb(int(content_read/((time() - start_time) or 1e-6)))
 
 			if content_length is not None:
 				roptions.call_progress_cb((content_read / content_length) * 100)

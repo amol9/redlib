@@ -52,10 +52,15 @@ class _Cache():
 
 
 	def clear_expired_items(self):
+		del_list = []
 		for id, cache_item in self._db.items():
 			if cache_item.timeout is not None and cache_item.timeout <= int(time()):
-				self.delete(id)
-				self._db.pop(id)
+				del_list.append(id)
+
+		for id in del_list:
+			self.delete(id)
+			self._db.pop(id)
+
 		self.save_db()
 		
 
