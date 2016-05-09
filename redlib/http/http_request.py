@@ -231,7 +231,7 @@ class HttpRequest:
 
 
 	def get_content_length(self, response, roptions):
-		content_length = response.headers.getheader('Content-Length')
+		content_length = response.headers.get('Content-Length')
 		if content_length is not None:
 			content_length = int(content_length) 
 

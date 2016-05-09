@@ -3,6 +3,7 @@ from datetime import timedelta
 import hashlib
 
 from ..system.common import is_py2
+from ..py23.lang23 import cmp
 
 
 __all__ = ['ob', 'str_time_period_to_seconds', 'md5hash', 'cmp_version']
@@ -58,7 +59,7 @@ def str_time_period_to_seconds(period):
 
 def md5hash(input):
 	md5h = hashlib.md5()
-	md5h.update(input)
+	md5h.update(input.encode('utf-8'))
 	return md5h.hexdigest()
 
 

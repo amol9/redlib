@@ -34,7 +34,7 @@ class Column:
 		self.width	= width
 		self.fill	= fill
 		self.max	= max
-		self.min	= maxn(min, 1)
+		self.min	= maxn(min or 0, 1)
 		self.wrap	= wrap
 		self.align	= align
 		self.ratio	= ratio
@@ -105,7 +105,7 @@ class ColumnPrinter:
 		if any(map(lambda c : c.width < 1, filter(lambda c : c.fill == False, self._cols))):
 			raise ColumnPrinterError('column width must be at least 1')
 
-		fill_cols = filter(lambda c : c.fill == True, self._cols)
+		fill_cols = list(filter(lambda c : c.fill == True, self._cols))
 		if sum(map(lambda c : c.ratio or (1 / len(fill_cols)), fill_cols)) > 1:
 			raise ColumnPrinterError('total of fill column ratios > 1')
 
@@ -252,7 +252,7 @@ class ColumnPrinter:
 
 			sep = lambda i, col: col.char if col.cond(prev_col(i), next_col(i)) else ''
 
-			row = map(lambda (i, c) : margin(c, (row_arg(i) or '') if i not in sep_cols else sep(i, c)), enumerate(self._cols))
+			row = map(lambda t : ((lambda i, c : margin(c, (row_arg(i) or '')) if i not in sep_cols else sep(i, c))(*t)), enumerate(self._cols))
 
 			output = self._fmt_string.format(*row)
 
@@ -364,7 +364,9 @@ class ColumnPrinter:
 		args_copy = list(args)
 
 		sep_cols = filter(lambda i : self._cols[i].__class__ == SepColumn, range(0, len(self._cols)))
-		map(lambda i : args_copy.insert(i, ''), sep_cols)
+		#map(lambda i : args_copy.insert(i, ''), sep_cols)
+		for i in sep_cols:
+			args_copy.insert(i, '')
 
 		if len(args_copy) < col_count:
 			args_copy.extend([''] * (col_count - len(args_copy)))
