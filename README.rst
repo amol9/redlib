@@ -15,6 +15,7 @@ Submodules
 * colors: a named color list
 * prnt: miscellaneous print functions 
 * py23: python 2.7/3.4 compatibility functions
+* http: http request / response handling, caching
 
 Download
 ========
