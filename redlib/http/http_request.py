@@ -49,7 +49,7 @@ class RequestOptions:
 
 	def __init__(self, save_filepath=None, nocache=False, open_file=None, headers=None, save_to_temp_file=False,
 			progress_cb=None, progress_cp=None, content_length_cb=None, rate_cb=None, cached_cb=None,
-			max_content_length=None, cache_timeout=None):
+			max_content_length=None, cache_timeout=None, decode_strat='replace', decode_repl='?'):
 
 		self.save_filepath	= save_filepath
 		self.nocache		= nocache
@@ -63,6 +63,8 @@ class RequestOptions:
 		self.max_content_length	= max_content_length
 		self.save_to_temp_file	= save_to_temp_file
 		self.cache_timeout	= cache_timeout
+		self.decode_strat	= decode_strat
+		self.decode_repl	= decode_repl
 
 		self.temp_filepath	= None
 
@@ -73,7 +75,8 @@ class RequestOptions:
 
 
 	def call_progress_cp(self):
-		self.progress_cp()
+		if self.progress_cp is not None:
+			self.progress_cp()
 
 
 	def call_content_length_cb(self, value):
@@ -208,7 +211,9 @@ class HttpRequest:
 			buf = out.read()
 			out.close()
 			if is_py3():
-				buf = buf.decode(encoding='utf-8')
+				buf = buf.decode('utf-8', roptions.decode_strat)
+				if roptions.decode_strat == 'replace':
+					buf = buf.replace('\ufffd', roptions.decode_repl)
 			return buf
 
 
