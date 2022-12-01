@@ -5,6 +5,8 @@ import socket
 import tempfile
 from os import fdopen
 from time import time
+import ssl
+import certifi
 
 from enum import Enum
 
@@ -106,6 +108,8 @@ class HttpRequest:
 			except CacheError as e:
 				pass
 
+		self.ssl_context	= None
+
 
 	def get(self, url, request_options=None):
 		roptions = RequestOptions() if request_options is None else request_options
@@ -119,10 +123,13 @@ class HttpRequest:
 		res = None
 		headers = self.combine_headers(roptions)
 
+		if self.ssl_context is None:
+			self.ssl_context = ssl.create_default_context(cafile=certifi.where())
+
 		if headers is None:
-			res = self.exc_call(urlopen, roptions, url, timeout=self._goptions.timeout)
+			res = self.exc_call(urlopen, roptions, url, timeout=self._goptions.timeout, context=self.ssl_context)
 		else:
-			res = self.exc_call(urlopen, roptions, Request(url, None, headers), timeout=self._goptions.timeout)
+			res = self.exc_call(urlopen, roptions, Request(url, None, headers), timeout=self._goptions.timeout, context=self.ssl_context)
 
 		out = self.get_outbuffer(roptions)
 		content_length = self.get_content_length(res, roptions)
@@ -290,8 +297,11 @@ class HttpRequest:
 
 
 	def exists(self, url, timeout=10):
+		if self.ssl_context is None:
+			self.ssl_context = ssl.create_default_context(cafile=certifi.where())
+
 		try:
-			res = urlopen(url, timeout=timeout)
+			res = urlopen(url, timeout=timeout, context=self.ssl_context)
 			if res.code == 200:
 				res.close()
 				return True
