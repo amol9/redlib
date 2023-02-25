@@ -1,5 +1,6 @@
 import sys
 import platform
+from os import mkdir
 from os.path import expanduser, join as joinpath, exists
 
 
